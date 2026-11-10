@@ -1,0 +1,2460 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ursa - Нескінченний ліс та полювання</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            overflow: hidden;
+            background-color: #0b1411;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #ffffff;
+            background: rgba(14, 25, 20, 0.90);
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            z-index: 10;
+            border-left: 4px solid #3df088;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+        #hud b { color: #54f399; }
+        .key {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            padding: 1px 6px;
+            margin: 0 2px;
+            font-weight: bold;
+            color: #3df088;
+        }
+        #time-panel {
+            margin-top: 6px;
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 6px;
+            border: 1px solid rgba(84, 243, 153, 0.3);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        #hunt-subtitle {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.6px;
+            text-align: center;
+            pointer-events: none;
+            z-index: 40;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.85);
+            white-space: nowrap;
+            transition: opacity 0.4s ease;
+        }
+
+        .waypoint-marker {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+            z-index: 5;
+            transition: opacity 0.15s ease-out;
+        }
+        .waypoint-ring {
+            width: 22px;
+            height: 22px;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.35);
+            box-shadow: 0 0 14px #ffffff, 0 0 24px rgba(255, 255, 255, 0.8);
+            animation: pulseWaypointWhite 1.8s infinite ease-in-out;
+        }
+        .waypoint-label {
+            margin-top: 4px;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13.5px;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
+            background: rgba(0, 0, 0, 0.45);
+            padding: 1px 7px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        @keyframes pulseWaypointWhite {
+            0% { transform: scale(0.9); box-shadow: 0 0 8px #ffffff; }
+            50% { transform: scale(1.15); box-shadow: 0 0 20px #ffffff; }
+            100% { transform: scale(0.9); box-shadow: 0 0 8px #ffffff; }
+        }
+
+        #screen-fade {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 30;
+            transition: opacity 0.8s ease;
+        }
+        #screen-fade.flash-fail {
+            animation: failAnim 1.4s ease-in-out forwards;
+        }
+        #screen-fade.sleep-black {
+            opacity: 1 !important;
+            transition: opacity 1.2s ease-in-out;
+        }
+        @keyframes failAnim {
+            0% { opacity: 0; }
+            35% { opacity: 0.72; }
+            70% { opacity: 0.65; }
+            100% { opacity: 0; }
+        }
+    </style>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="hud">
+        <b>ПРОЦЕДУРНИЙ ЛІС ТА ПОДОРОЖ:</b><br>
+        <span class="key">W</span> / <span class="key">S</span> — Вперед / Назад<br>
+        <span class="key">A</span> / <span class="key">D</span> — Поворот<br>
+        <span class="key">Shift</span> — <b>Прискорений біг</b><br>
+        <span class="key">T</span> — <b>Відпочити / Спати</b><br>
+        <span class="key">N</span> — <b>Прискорити зміну доби</b><br>
+        <small style="color: #92bfa9;">Коліщатко — інерційний зум</small>
+        <div id="time-panel">
+            📅 <b id="day-val">День 1 / 10</b> | <span id="phase-val" style="color: #ffde59;">День</span>
+        </div>
+    </div>
+
+    <div id="hunt-subtitle">Звуки звірів, треба вполювати...</div>
+    <div id="screen-fade"></div>
+
+    <div id="active-wp-marker" class="waypoint-marker">
+        <div class="waypoint-ring"></div>
+        <div class="waypoint-label">-- м</div>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+        const loader = new GLTFLoader();
+        const textureLoader = new THREE.TextureLoader();
+
+        // 1. СЦЕНА ТА АТМОСФЕРА
+        const scene = new THREE.Scene();
+        const baseMistColor = new THREE.Color(0x1c3029);
+        scene.fog = new THREE.Fog(baseMistColor, 28, 105);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1600);
+        camera.position.set(0, 2.8, 7.5);
+
+        // 2. РЕНДЕРЕР ТА ОПТИМІЗОВАНІ ТІНІ
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.08;
+        document.body.appendChild(renderer.domElement);
+
+        const composer = new EffectComposer(renderer);
+        const renderPass = new RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            0.50, 0.45, 0.82
+        );
+        composer.addPass(bloomPass);
+
+        const outputPass = new OutputPass();
+        composer.addPass(outputPass);
+
+        // 3. УПРАВЛІННЯ КАМЕРОЮ
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 0.9, 0);
+        controls.maxPolarAngle = Math.PI / 2 - 0.01;
+        controls.enableZoom = false;
+
+        let targetDistance = 7.5;
+        let currentDistance = 7.5;
+        window.addEventListener('wheel', (e) => {
+            targetDistance += e.deltaY * 0.0035 * (targetDistance * 0.4);
+            targetDistance = THREE.MathUtils.clamp(targetDistance, 1.5, 30.0);
+        }, { passive: true });
+
+        // 4. ДИНАМІЧНЕ ОСВІТЛЕННЯ
+        const ambientLight = new THREE.AmbientLight(0xdcf0e2, 0.65);
+        scene.add(ambientLight);
+
+        const hemiLight = new THREE.HemisphereLight(0x9fd2f0, 0x243e20, 0.85);
+        scene.add(hemiLight);
+
+        const sunLight = new THREE.DirectionalLight(0xfffae0, 2.3);
+        sunLight.position.set(32, 50, 32);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 1024;
+        sunLight.shadow.mapSize.height = 1024;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 135;
+        sunLight.shadow.camera.left = -45;
+        sunLight.shadow.camera.right = 45;
+        sunLight.shadow.camera.top = 45;
+        sunLight.shadow.camera.bottom = -45;
+        sunLight.shadow.bias = -0.0003;
+        sunLight.shadow.normalBias = 0.04;
+        scene.add(sunLight);
+        scene.add(sunLight.target);
+
+        const skyFillLight = new THREE.DirectionalLight(0x528570, 0.45);
+        skyFillLight.position.set(-32, 20, -32);
+        scene.add(skyFillLight);
+
+        // 5. НЕБО ТА ШЕЙДЕРИ
+        const skyUniforms = {
+            uTime: { value: 0 },
+            uSunPos: { value: new THREE.Vector3(0, 1, 0) },
+            uDayFactor: { value: 1.0 },
+            uSunsetFactor: { value: 0.0 }
+        };
+
+        const skyMat = new THREE.ShaderMaterial({
+            uniforms: skyUniforms,
+            depthWrite: false,
+            side: THREE.BackSide,
+            vertexShader: `
+                varying vec3 vWorldPosition;
+                void main() {
+                    vec4 worldPos = modelMatrix * vec4(position, 1.0);
+                    vWorldPosition = worldPos.xyz;
+                    gl_Position = projectionMatrix * viewMatrix * worldPos;
+                }
+            `,
+            fragmentShader: `
+                uniform float uTime;
+                uniform vec3 uSunPos;
+                uniform float uDayFactor;
+                uniform float uSunsetFactor;
+                varying vec3 vWorldPosition;
+
+                float hash(vec2 p) {
+                    p = fract(p * vec2(123.34, 456.21));
+                    p += dot(p, p + 45.32);
+                    return fract(p.x * p.y);
+                }
+
+                float noise(vec2 p) {
+                    vec2 i = floor(p);
+                    vec2 f = fract(p);
+                    f = f * f * (3.0 - 2.0 * f);
+                    float a = hash(i);
+                    float b = hash(i + vec2(1.0, 0.0));
+                    float c = hash(i + vec2(0.0, 1.0));
+                    float d = hash(i + vec2(1.0, 1.0));
+                    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+                }
+
+                float fbm(vec2 p) {
+                    float v = 0.0;
+                    float a = 0.5;
+                    mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
+                    for (int i = 0; i < 4; ++i) {
+                        v += a * noise(p);
+                        p = rot * p * 2.05 + vec2(40.0);
+                        a *= 0.5;
+                    }
+                    return v;
+                }
+
+                void main() {
+                    vec3 dir = normalize(vWorldPosition);
+                    float h = max(dir.y, 0.0);
+
+                    vec3 dayZenith = vec3(0.18, 0.42, 0.68);
+                    vec3 dayHorizon = vec3(0.40, 0.62, 0.80);
+                    vec3 sunsetZenith = vec3(0.24, 0.12, 0.38);
+                    vec3 sunsetHorizon = vec3(1.0, 0.44, 0.12);
+                    vec3 nightZenith = vec3(0.015, 0.03, 0.07);
+                    vec3 nightHorizon = vec3(0.05, 0.08, 0.12);
+
+                    vec3 currentZenith = mix(nightZenith, dayZenith, uDayFactor);
+                    currentZenith = mix(currentZenith, sunsetZenith, uSunsetFactor);
+                    vec3 currentHorizon = mix(nightHorizon, dayHorizon, uDayFactor);
+                    currentHorizon = mix(currentHorizon, sunsetHorizon, uSunsetFactor);
+
+                    vec3 skyColor = mix(currentHorizon, currentZenith, pow(h, 0.72));
+
+                    if (uDayFactor < 0.25 && h > 0.05) {
+                        float star = step(0.992, hash(floor(dir.xz * 340.0)));
+                        skyColor += vec3(star) * (1.0 - uDayFactor) * smoothstep(0.05, 0.25, h);
+                    }
+
+                    float sunDiff = max(dot(dir, uSunPos), 0.0);
+                    vec3 sunGlowColor = mix(vec3(1.0, 0.95, 0.75), vec3(1.0, 0.52, 0.18), uSunsetFactor);
+                    vec3 sunHalo = sunGlowColor * pow(sunDiff, mix(14.0, 6.0, uSunsetFactor)) * (0.5 + uSunsetFactor * 0.9);
+                    skyColor += sunHalo;
+
+                    vec2 cloudUV = dir.xz / (h + 0.18);
+                    vec2 wind = vec2(uTime * 0.012, uTime * 0.006);
+                    float cloudNoise = fbm((cloudUV * 0.45) + wind);
+                    float clouds = smoothstep(0.44, 0.78, cloudNoise) * smoothstep(0.04, 0.28, h);
+
+                    vec3 cloudBase = mix(vec3(0.08, 0.10, 0.14), vec3(0.85, 0.90, 0.93), uDayFactor);
+                    cloudBase = mix(cloudBase, vec3(0.45, 0.22, 0.20), uSunsetFactor);
+
+                    vec3 cloudLit  = mix(vec3(0.25, 0.22, 0.35), vec3(1.0, 0.97, 0.90), uDayFactor);
+                    cloudLit  = mix(cloudLit, vec3(1.0, 0.65, 0.35), uSunsetFactor);
+
+                    vec3 finalCloudColor = mix(cloudBase, cloudLit, pow(sunDiff, 2.0) * 0.6);
+                    vec3 finalColor = mix(skyColor, finalCloudColor, clouds * 0.85);
+
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+            `
+        });
+
+        const skyDome = new THREE.Mesh(new THREE.SphereGeometry(950, 28, 20), skyMat);
+        scene.add(skyDome);
+
+        // 6. СИСТЕМА ЧАСУ
+        let gameStage = 1;
+        let currentDayDisplay = "День 1 / 10";
+        let currentHour = 12.5;
+        let targetHour = 12.5;
+        let isDay10CityWandering = false;
+
+
+        const dayValEl = document.getElementById('day-val');
+        const phaseValEl = document.getElementById('phase-val');
+
+        function updateDayNightCycle(delta, isFast) {
+            if (isFast) targetHour = (targetHour + delta * 5.0) % 24.0;
+            currentHour = THREE.MathUtils.lerp(currentHour, targetHour, 1.8 * delta);
+
+            const sunAngle = ((currentHour - 6.0) / 24.0) * Math.PI * 2;
+            const sunY = Math.sin(sunAngle);
+            const sunX = Math.cos(sunAngle);
+            const sunZ = Math.sin(sunAngle * 0.5) * 0.4;
+
+            const sunDir = new THREE.Vector3(sunX, Math.max(sunY, -0.4), sunZ).normalize();
+            skyUniforms.uSunPos.value.copy(sunDir);
+
+            const dayFactor = THREE.MathUtils.clamp((sunY + 0.15) / 0.6, 0.0, 1.0);
+            const sunsetFactor = THREE.MathUtils.clamp(1.0 - Math.abs(sunY) * 3.2, 0.0, 1.0);
+
+            skyUniforms.uDayFactor.value = dayFactor;
+            skyUniforms.uSunsetFactor.value = sunsetFactor;
+
+            const dayFog = new THREE.Color(0x1c3029);
+            const sunsetFog = new THREE.Color(0x562315);
+            const nightFog = new THREE.Color(0x060f12);
+            const curFog = nightFog.clone().lerp(dayFog, dayFactor).lerp(sunsetFog, sunsetFactor * 0.85);
+            scene.fog.color.copy(curFog);
+
+            if (sunY > -0.05) {
+                sunLight.intensity = THREE.MathUtils.lerp(0.5, 2.3, dayFactor);
+                sunLight.color.setRGB(1.0, 0.95 - sunsetFactor * 0.48, 0.85 - sunsetFactor * 0.68);
+                ambientLight.intensity = THREE.MathUtils.lerp(0.12, 0.65, dayFactor);
+                ambientLight.color.setRGB(1.0, 0.95 - sunsetFactor * 0.35, 0.90 - sunsetFactor * 0.45);
+                hemiLight.intensity = THREE.MathUtils.lerp(0.16, 0.80, dayFactor);
+            } else {
+                sunLight.intensity = 0.35;
+                sunLight.color.setRGB(0.55, 0.72, 1.0);
+                ambientLight.intensity = 0.16;
+                hemiLight.intensity = 0.20;
+            }
+
+            if (dayValEl) dayValEl.innerText = currentDayDisplay;
+            if (phaseValEl) {
+                if (currentHour >= 5.0 && currentHour < 8.5) {
+                    phaseValEl.innerText = "Світанок";
+                    phaseValEl.style.color = "#ffb076";
+                } else if (currentHour >= 8.5 && currentHour < 16.8) {
+                    phaseValEl.innerText = "День";
+                    phaseValEl.style.color = "#ffde59";
+                } else if (currentHour >= 16.8 && currentHour < 20.8) {
+                    phaseValEl.innerText = "Захід сонця (Вечір)";
+                    phaseValEl.style.color = "#ff6a38";
+                } else {
+                    phaseValEl.innerText = "Ніч";
+                    phaseValEl.style.color = "#79b7ff";
+                }
+            }
+        }
+
+        // 7. РЕЛЬЄФ
+        const RIVER_Z = 72.0;
+        const RIVER_WIDTH = 13.0;
+        const WATER_Y = -1.15;
+        const CITY_X = 10.0;
+        const CITY_Z = 490.0;
+
+        function getRiverCenter(x) { return RIVER_Z + Math.sin(x * 0.035) * 5.0; }
+
+        function getTerrainHeight(x, z) {
+            const dist = Math.hypot(x, z);
+            const clearWeight = THREE.MathUtils.smoothstep(dist, 4.0, 30.0);
+
+            const h1 = Math.sin(x * 0.04) * Math.cos(z * 0.04) * 1.6;
+            const h2 = Math.sin(x * 0.08 + 1.2) * Math.sin(z * 0.07 + 0.4) * 0.65;
+            const h3 = Math.cos(x * 0.18 + z * 0.14) * 0.2;
+
+            let height = (h1 + h2 + h3) * clearWeight;
+
+            const rZ = getRiverCenter(x);
+            const distToRiver = Math.abs(z - rZ);
+            if (distToRiver < RIVER_WIDTH) {
+                const norm = distToRiver / RIVER_WIDTH;
+                const carve = Math.cos(norm * Math.PI * 0.5);
+                height -= carve * 3.2;
+            }
+
+            const relX = x - CITY_X;
+            const relZ = z - CITY_Z;
+            const distToCity = Math.hypot(relX, relZ);
+
+            if (distToCity < 65.0) {
+                const blend = THREE.MathUtils.smoothstep(distToCity, 18.0, 65.0);
+                height = THREE.MathUtils.lerp(0.0, height, blend);
+            }
+            if (Math.abs(relX) < 14.0 && relZ > -95.0 && relZ < 65.0) {
+                const roadBlend = THREE.MathUtils.smoothstep(Math.abs(relX), 8.0, 14.0);
+                height = THREE.MathUtils.lerp(0.0, height, roadBlend);
+            }
+
+            return height;
+        }
+
+        let isCityActive = false;
+        function getSurfaceHeight(x, z) {
+            let h = getTerrainHeight(x, z);
+            if (isCityActive) {
+                const relX = x - CITY_X;
+                const relZ = z - CITY_Z;
+                const distToStand = Math.hypot(relX, relZ);
+
+                if (distToStand < 5.3) {
+                    h += 0.85;
+                } else if (distToStand < 7.1) {
+                    const stepT = 1.0 - THREE.MathUtils.smoothstep(distToStand, 6.6, 7.1);
+                    h += 0.45 * stepT;
+                } else {
+                    const onRoad = Math.abs(relX) < 8.0 && relZ > -90.0 && relZ < 60.0;
+                    const onPlaza = Math.abs(relX) < 38.0 && Math.abs(relZ - 12.0) < 38.0;
+                    if (onRoad || onPlaza) h = Math.max(h, 0.08);
+                }
+            }
+            return h;
+        }
+
+        const groundTexture = textureLoader.load('grass.jpg');
+        groundTexture.wrapS = THREE.RepeatWrapping;
+        groundTexture.wrapT = THREE.RepeatWrapping;
+        groundTexture.repeat.set(300, 300);
+        groundTexture.colorSpace = THREE.SRGBColorSpace;
+        groundTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+        const groundMaterial = new THREE.MeshStandardMaterial({
+            map: groundTexture,
+            color: 0xffffff,
+            roughness: 0.88,
+            metalness: 0.02
+        });
+
+        const terrainGeo = new THREE.PlaneGeometry(1500, 1500, 140, 140);
+        terrainGeo.rotateX(-Math.PI / 2);
+
+        const posAttr = terrainGeo.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+            const x = posAttr.getX(i);
+            const z = posAttr.getZ(i);
+            posAttr.setY(i, getTerrainHeight(x, z));
+        }
+        terrainGeo.computeVertexNormals();
+
+        const terrainMesh = new THREE.Mesh(terrainGeo, groundMaterial);
+        terrainMesh.receiveShadow = true;
+        scene.add(terrainMesh);
+
+        function createWaterNormalMap() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            const imgData = ctx.createImageData(256, 256);
+            for (let y = 0; y < 256; y++) {
+                for (let x = 0; x < 256; x++) {
+                    const i = (y * 256 + x) * 4;
+                    const nx = Math.sin(x * 0.16) * Math.cos(y * 0.12) * 0.5 + 0.5;
+                    const ny = Math.cos(x * 0.12) * Math.sin(y * 0.16) * 0.5 + 0.5;
+                    imgData.data[i] = Math.floor(nx * 255);
+                    imgData.data[i + 1] = Math.floor(ny * 255);
+                    imgData.data[i + 2] = 255; imgData.data[i + 3] = 255;
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(30, 4);
+            return tex;
+        }
+
+        const waterNormalMap = createWaterNormalMap();
+        const waterGeo = new THREE.PlaneGeometry(1500, 32, 140, 14);
+        waterGeo.rotateX(-Math.PI / 2);
+        const wPos = waterGeo.attributes.position;
+        for (let i = 0; i < wPos.count; i++) {
+            const x = wPos.getX(i);
+            const origZ = wPos.getZ(i);
+            wPos.setZ(i, getRiverCenter(x) + origZ);
+            wPos.setY(i, WATER_Y);
+        }
+        waterGeo.computeVertexNormals();
+
+        const waterMat = new THREE.MeshStandardMaterial({
+            color: 0x186b72,
+            normalMap: waterNormalMap,
+            normalScale: new THREE.Vector2(0.85, 0.85),
+            roughness: 0.06,
+            metalness: 0.90,
+            transparent: true,
+            opacity: 0.88
+        });
+        const riverMesh = new THREE.Mesh(waterGeo, waterMat);
+        scene.add(riverMesh);
+
+        // ==========================================
+        // 7.1 ВЛАСНА ОПТИМІЗОВАНА ТРАВА (3000 ПАЛИЧОК)
+        // ==========================================
+        const STICK_COUNT = 3000;
+        const STICK_RADIUS = 24.0;
+        const STICK_AREA_SIZE = STICK_RADIUS * 2.0;
+
+        function createStickGeometry() {
+            const geom = new THREE.BufferGeometry();
+            const w = 0.045; // тонка паличка
+            const h = 0.44;  // висота
+
+            // 2 схрещені трикутники для об'ємності з усіх боків
+            const positions = new Float32Array([
+                -w, 0, 0,   w, 0, 0,   0, h, 0,
+                 0, 0, -w,  0, 0, w,   0, h, 0
+            ]);
+
+            // Градієнтні кольори: низ темно-зелений, кінчик свіжий і яскравий
+            const colors = new Float32Array([
+                0.12, 0.32, 0.10,   0.12, 0.32, 0.10,   0.55, 0.92, 0.30,
+                0.12, 0.32, 0.10,   0.12, 0.32, 0.10,   0.55, 0.92, 0.30
+            ]);
+
+            const normals = new Float32Array([
+                0, 1, 0,  0, 1, 0,  0, 1, 0,
+                0, 1, 0,  0, 1, 0,  0, 1, 0
+            ]);
+
+            geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geom.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+            return geom;
+        }
+
+        const grassWindUniforms = { uTime: { value: 0 } };
+
+        const stickMaterial = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: 0.8,
+            metalness: 0.05,
+            side: THREE.DoubleSide
+        });
+
+        // Шейдер вітру: хитає кінчики на відеокарті без навантаження на процесор
+        stickMaterial.onBeforeCompile = (shader) => {
+            shader.uniforms.uWindTime = grassWindUniforms.uTime;
+            shader.vertexShader = `uniform float uWindTime;\n` + shader.vertexShader;
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <begin_vertex>',
+                `#include <begin_vertex>
+                float swayFactor = clamp(position.y / 0.44, 0.0, 1.0);
+                float wave = sin(uWindTime * 2.8 + position.x * 2.2 + position.z * 1.8);
+                transformed.x += wave * 0.09 * swayFactor;
+                transformed.z += cos(uWindTime * 2.1 + position.x * 1.6) * 0.07 * swayFactor;
+                `
+            );
+        };
+
+        const stickInstancedMesh = new THREE.InstancedMesh(createStickGeometry(), stickMaterial, STICK_COUNT);
+        stickInstancedMesh.castShadow = false;
+        stickInstancedMesh.receiveShadow = false;
+        stickInstancedMesh.frustumCulled = false;
+        scene.add(stickInstancedMesh);
+
+        // Фіксовані випадкові зміщення паличок навколо ведмедя
+        const stickOffsetsX = new Float32Array(STICK_COUNT);
+        const stickOffsetsZ = new Float32Array(STICK_COUNT);
+        const stickRotY = new Float32Array(STICK_COUNT);
+        const stickScale = new Float32Array(STICK_COUNT);
+
+        for (let i = 0; i < STICK_COUNT; i++) {
+            stickOffsetsX[i] = (Math.random() - 0.5) * STICK_AREA_SIZE;
+            stickOffsetsZ[i] = (Math.random() - 0.5) * STICK_AREA_SIZE;
+            stickRotY[i] = Math.random() * Math.PI * 2;
+            stickScale[i] = 0.75 + Math.random() * 0.55;
+        }
+
+        const dummyStick = new THREE.Object3D();
+        let lastGrassBearX = 99999;
+        let lastGrassBearZ = 99999;
+
+        function updateGrassField(bx, bz, force = false) {
+            const moveDistSq = (bx - lastGrassBearX) ** 2 + (bz - lastGrassBearZ) ** 2;
+            // Перераховуємо позиції ЛИШЕ якщо ведмідь ступив більше ніж на 40 см
+            if (!force && moveDistSq < 0.16) return;
+            lastGrassBearX = bx;
+            lastGrassBearZ = bz;
+
+            const halfArea = STICK_AREA_SIZE * 0.5;
+
+            for (let i = 0; i < STICK_COUNT; i++) {
+                // Безшовне циклічне обгортання навколо ведмедя
+                let wx = bx + (((stickOffsetsX[i] - bx) % STICK_AREA_SIZE) + STICK_AREA_SIZE * 1.5) % STICK_AREA_SIZE - halfArea;
+                let wz = bz + (((stickOffsetsZ[i] - bz) % STICK_AREA_SIZE) + STICK_AREA_SIZE * 1.5) % STICK_AREA_SIZE - halfArea;
+
+                const wy = getTerrainHeight(wx, wz);
+                const inRiver = wy < (WATER_Y + 0.15);
+                const inCity = isCityActive && (Math.hypot(wx - CITY_X, wz - CITY_Z) < 42.0 || (Math.abs(wx - CITY_X) < 8.0 && wz > 395.0));
+
+                if (inRiver || inCity) {
+                    dummyStick.position.set(0, -999, 0);
+                    dummyStick.scale.set(0, 0, 0);
+                } else {
+                    dummyStick.position.set(wx, wy, wz);
+                    dummyStick.rotation.y = stickRotY[i];
+                    dummyStick.scale.setScalar(stickScale[i]);
+                }
+                dummyStick.updateMatrix();
+                stickInstancedMesh.setMatrixAt(i, dummyStick.matrix);
+            }
+
+            stickInstancedMesh.instanceMatrix.needsUpdate = true;
+        }
+
+        // Первинна ініціалізація трави на старті
+        updateGrassField(0, 0, true);
+
+        // 8. СИСТЕМА МІСІЙ
+        function createGlowSpotTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(128, 128, 10, 128, 128, 128);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+            grad.addColorStop(0.35, 'rgba(255, 255, 255, 0.60)');
+            grad.addColorStop(0.70, 'rgba(255, 255, 255, 0.20)');
+            grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+            ctx.fillStyle = grad; ctx.fillRect(0, 0, 256, 256);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const glowSpotTexture = createGlowSpotTexture();
+
+        let activeWaypointIndex = 0;
+        let isNightSleepingStage = false;
+        let isCitySleepStage = false;
+        let warningSubtitleTimer = null;
+
+        const day1Waypoints = [
+            { x: 22.0,  z: 26.0,  type: 'rabbit' },
+            { x: -46.0, z: 38.0,  type: 'deer' },
+            { x: 55.0,  z: -68.0, type: 'deer' }
+        ];
+
+        const day2RiverWaypoints = [
+            { x: 8.0,  z: 71.5, type: 'fish' },
+            { x: 11.5, z: 72.8, type: 'fish' },
+            { x: 15.0, z: 72.0, type: 'fish' },
+            { x: 18.5, z: 73.0, type: 'fish' },
+            { x: 22.0, z: 72.2, type: 'fish' }
+        ];
+
+        const combinedWaypoints = [
+            { x: 24.0,  z: 28.0,  type: 'rabbit' },
+            { x: -32.0, z: 52.0,  type: 'deer' },
+            { x: 10.0,  z: 72.0,  type: 'fish' },
+            { x: 13.5,  z: 72.8,  type: 'fish' },
+            { x: 17.0,  z: 72.2,  type: 'fish' },
+            { x: 20.5,  z: 73.0,  type: 'fish' }
+        ];
+
+        const cityWaypoints = [
+            { x: CITY_X, z: CITY_Z, type: 'city_stand' }
+        ];
+
+        function getCurrentMissionWaypoints() {
+            if (gameStage === 1) return day1Waypoints;
+            if (gameStage === 2) return day2RiverWaypoints;
+            if (gameStage === 3) return combinedWaypoints;
+            if (gameStage === 4) return cityWaypoints;
+            return [];
+        }
+
+        const wpVisualGroup = new THREE.Group();
+        const spotGeo = new THREE.PlaneGeometry(6.2, 6.2);
+        spotGeo.rotateX(-Math.PI / 2);
+        const spotMat = new THREE.MeshBasicMaterial({
+            map: glowSpotTexture,
+            transparent: true,
+            opacity: 0.85,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        const spotMesh = new THREE.Mesh(spotGeo, spotMat);
+        spotMesh.position.y = 0.08;
+        wpVisualGroup.add(spotMesh);
+
+        const ringGeo = new THREE.RingGeometry(2.6, 2.9, 48);
+        ringGeo.rotateX(-Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.65,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.position.y = 0.10;
+        wpVisualGroup.add(ringMesh);
+        scene.add(wpVisualGroup);
+
+        function setWaypointVisualPos(x, z, inWater = false) {
+            const y = inWater ? WATER_Y : getSurfaceHeight(x, z);
+            wpVisualGroup.position.set(x, y, z);
+            wpVisualGroup.visible = true;
+        }
+
+        setWaypointVisualPos(day1Waypoints[0].x, day1Waypoints[0].z);
+
+        // 8.1 ТВАРИНИ
+        const animalsList = [];
+
+        function createFallbackAnimalMesh(type) {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshStandardMaterial({ color: type === 'rabbit' ? 0x8c7c72 : 0x935d39, roughness: 0.8 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 1.2), mat);
+            body.position.y = 0.6;
+            body.castShadow = true;
+            group.add(body);
+            return group;
+        }
+
+        function createAnimalInstance(type, x, z, wpIdx) {
+            const y = getTerrainHeight(x, z);
+            const animalObj = {
+                wpIndex: wpIdx,
+                type: type,
+                group: new THREE.Group(),
+                fleeing: false,
+                fled: false,
+                fleeDirection: new THREE.Vector3(),
+                mixer: null,
+                activeAction: null,
+                runAction: null
+            };
+
+            const modelPath = type === 'rabbit' ? 'rabbit/scene.gltf' : 'deer/scene.gltf';
+
+            loader.load(modelPath, (gltf) => {
+                try {
+                    const model = gltf.scene;
+                    model.updateMatrixWorld(true);
+                    const box = new THREE.Box3().setFromObject(model);
+                    const size = box.getSize(new THREE.Vector3());
+                    const center = box.getCenter(new THREE.Vector3());
+
+                    const targetH = type === 'rabbit' ? 0.65 : 1.9;
+                    const scale = targetH / (size.y || 1.0);
+                    model.scale.setScalar(scale);
+                    model.position.x = -center.x * scale;
+                    model.position.y = -box.min.y * scale;
+                    model.position.z = -center.z * scale;
+
+                    model.traverse(c => {
+                        if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
+                    });
+
+                    animalObj.group.add(model);
+
+                    if (gltf.animations && gltf.animations.length > 0) {
+                        const m = new THREE.AnimationMixer(model);
+                        animalObj.mixer = m;
+                        const runClip = gltf.animations.find(c => c.name.toLowerCase().includes('run')) || gltf.animations[0];
+                        animalObj.runAction = m.clipAction(runClip);
+                        const idleClip = gltf.animations.find(c => c.name.toLowerCase().includes('idle')) || gltf.animations[0];
+                        animalObj.activeAction = m.clipAction(idleClip);
+                        animalObj.activeAction.play();
+                    }
+                } catch(e) {
+                    animalObj.group.add(createFallbackAnimalMesh(type));
+                }
+            }, undefined, () => {
+                animalObj.group.add(createFallbackAnimalMesh(type));
+            });
+
+            animalObj.group.position.set(x, y, z);
+            scene.add(animalObj.group);
+            animalsList.push(animalObj);
+            return animalObj;
+        }
+
+        day1Waypoints.forEach((wp, idx) => {
+            const a = createAnimalInstance(wp.type, wp.x, wp.z, idx);
+            a.group.visible = (idx === 0);
+        });
+
+        // 8.2 РИБИ
+        const fishList = [];
+        function createFishMesh() {
+            const group = new THREE.Group();
+            const body = new THREE.Mesh(
+                new THREE.ConeGeometry(0.16, 0.75, 8),
+                new THREE.MeshStandardMaterial({ color: 0x9ec9cf, roughness: 0.2, metalness: 0.8 })
+            );
+            body.rotation.x = Math.PI / 2;
+            group.add(body);
+            const tail = new THREE.Mesh(
+                new THREE.ConeGeometry(0.12, 0.35, 6),
+                new THREE.MeshStandardMaterial({ color: 0xd96b43, roughness: 0.3 })
+            );
+            tail.position.z = -0.45;
+            tail.rotation.x = -Math.PI / 2;
+            group.add(tail);
+            return group;
+        }
+
+        for (let i = 0; i < 5; i++) {
+            const fishMesh = createFishMesh();
+            fishMesh.visible = false;
+            scene.add(fishMesh);
+            fishList.push({ mesh: fishMesh, jumping: false });
+        }
+
+        // 8.3 МІСТО ТА СТЕНД
+        function createWindowTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512; canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#14161b'; ctx.fillRect(0, 0, 512, 512);
+
+            const cols = 6, rows = 5, w = 48, h = 42, gapX = 36, gapY = 46;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const x = 20 + c * (w + gapX);
+                    const y = 20 + r * (h + gapY);
+                    if (Math.random() < 0.65) {
+                        const roll = Math.random();
+                        if (roll < 0.7) ctx.fillStyle = 'rgba(255, 218, 125, 1.0)';
+                        else if (roll < 0.9) ctx.fillStyle = 'rgba(255, 165, 85, 1.0)';
+                        else ctx.fillStyle = 'rgba(165, 235, 255, 1.0)';
+                        ctx.fillRect(x, y, w, h);
+                    } else {
+                        ctx.fillStyle = '#22262e';
+                        ctx.fillRect(x, y, w, h);
+                    }
+                }
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        const cityWindowTexture = createWindowTexture();
+        const cityBuildingMaterial = new THREE.MeshStandardMaterial({
+            map: cityWindowTexture,
+            emissive: 0xffffff,
+            emissiveMap: cityWindowTexture,
+            emissiveIntensity: 1.25,
+            roughness: 0.65,
+            metalness: 0.15
+        });
+
+        const cityDistrictGroup = new THREE.Group();
+        cityDistrictGroup.position.set(CITY_X, 0, CITY_Z);
+        cityDistrictGroup.visible = false;
+        scene.add(cityDistrictGroup);
+
+        const buildingConfigs = [
+            { x: -32, z: -25, w: 20, d: 24, h: 14.5 },
+            { x: 32,  z: -25, w: 22, d: 24, h: 16.0 },
+            { x: -35, z: 20,  w: 22, d: 26, h: 13.0 },
+            { x: 35,  z: 20,  w: 24, d: 26, h: 15.0 },
+            { x: -58, z: -2,  w: 18, d: 45, h: 16.5 },
+            { x: 58,  z: -2,  w: 18, d: 45, h: 17.0 },
+            { x: 0,   z: 55,  w: 48, d: 20, h: 15.5 },
+            { x: -28, z: 65,  w: 26, d: 20, h: 12.0 },
+            { x: 28,  z: 65,  w: 26, d: 20, h: 13.5 }
+        ];
+
+        buildingConfigs.forEach(b => {
+            const bGeo = new THREE.BoxGeometry(b.w, b.h, b.d);
+            const bMesh = new THREE.Mesh(bGeo, cityBuildingMaterial);
+            bMesh.position.set(b.x, b.h / 2, b.z);
+            bMesh.castShadow = true; bMesh.receiveShadow = true;
+            cityDistrictGroup.add(bMesh);
+        });
+
+        const plazaGeo = new THREE.PlaneGeometry(75, 75);
+        plazaGeo.rotateX(-Math.PI / 2);
+        const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: 0.92 });
+        const plazaMesh = new THREE.Mesh(plazaGeo, asphaltMat);
+        plazaMesh.position.set(0, 0.05, 12);
+        plazaMesh.receiveShadow = true;
+        cityDistrictGroup.add(plazaMesh);
+
+        const approachRoadGeo = new THREE.PlaneGeometry(15, 65);
+        approachRoadGeo.rotateX(-Math.PI / 2);
+        const approachRoadMesh = new THREE.Mesh(approachRoadGeo, asphaltMat);
+        approachRoadMesh.position.set(0, 0.06, -55);
+        approachRoadMesh.receiveShadow = true;
+        cityDistrictGroup.add(approachRoadMesh);
+
+        const cityObstacles = [
+            { x: CITY_X - 5.5, z: CITY_Z - 38, r: 2.1 },
+            { x: CITY_X + 5.5, z: CITY_Z - 62, r: 2.1 },
+            { x: CITY_X - 18,  z: CITY_Z + 2,  r: 2.2 },
+            { x: CITY_X + 20,  z: CITY_Z - 10, r: 2.2 },
+            { x: CITY_X - 8.2, z: CITY_Z - 20, r: 1.2 },
+            { x: CITY_X + 8.2, z: CITY_Z - 48, r: 1.2 }
+        ];
+
+        function createCar(colorHex, x, z, rotY = 0) {
+            const car = new THREE.Group();
+            car.position.set(x, 0, z); car.rotation.y = rotY;
+            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.35, metalness: 0.35 });
+            const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.75, 4.3), bodyMat);
+            chassis.position.y = 0.55; chassis.castShadow = true; car.add(chassis);
+            const glassMat = new THREE.MeshStandardMaterial({ color: 0x1f242b, roughness: 0.2, metalness: 0.85 });
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.75, 2.3), glassMat);
+            cabin.position.set(0, 1.2, -0.2); cabin.castShadow = true; car.add(cabin);
+
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9 });
+            const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.35, 12);
+            wheelGeo.rotateZ(Math.PI / 2);
+            [
+                { x: -1.05, z: 1.3 }, { x: 1.05, z: 1.3 },
+                { x: -1.05, z: -1.3 }, { x: 1.05, z: -1.3 }
+            ].forEach(wPos => {
+                const w = new THREE.Mesh(wheelGeo, wheelMat);
+                w.position.set(wPos.x, 0.38, wPos.z);
+                w.castShadow = true; car.add(w);
+            });
+
+            const hlMat = new THREE.MeshBasicMaterial({ color: 0xfffae0 });
+            const hl1 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.1), hlMat);
+            hl1.position.set(-0.65, 0.65, 2.15);
+            const hl2 = hl1.clone(); hl2.position.x = 0.65;
+            car.add(hl1); car.add(hl2);
+            return car;
+        }
+
+        cityDistrictGroup.add(createCar(0x224888, -5.5, -38, 0));
+        cityDistrictGroup.add(createCar(0x882424, 5.5, -62, Math.PI));
+        cityDistrictGroup.add(createCar(0xd49f24, -18, 2, 1.2));
+        cityDistrictGroup.add(createCar(0x354d38, 20, -10, -0.8));
+
+        function createDumpster(x, z, rot = 0) {
+            const dGrp = new THREE.Group();
+            dGrp.position.set(x, 0, z); dGrp.rotation.y = rot;
+            const boxMat = new THREE.MeshStandardMaterial({ color: 0x2d4432, roughness: 0.75 });
+            const box = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 2.4), boxMat);
+            box.position.y = 0.65; box.castShadow = true; dGrp.add(box);
+            const lidMat = new THREE.MeshStandardMaterial({ color: 0x1f2620, roughness: 0.8 });
+            const lid = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.15, 2.5), lidMat);
+            lid.position.y = 1.3; dGrp.add(lid);
+            return dGrp;
+        }
+
+        function createTrashCan(x, z) {
+            const bin = new THREE.Group();
+            bin.position.set(x, 0, z);
+            const canMat = new THREE.MeshStandardMaterial({ color: 0x333b45, roughness: 0.7 });
+            const can = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.28, 0.9, 12), canMat);
+            can.position.y = 0.45; can.castShadow = true; bin.add(can);
+            return bin;
+        }
+
+        cityDistrictGroup.add(createDumpster(-8.2, -20, 0.2));
+        cityDistrictGroup.add(createDumpster(8.2, -48, -0.3));
+        cityDistrictGroup.add(createTrashCan(-14.5, -17));
+        cityDistrictGroup.add(createTrashCan(14.5, -17));
+        cityDistrictGroup.add(createTrashCan(-14.5, 13));
+        cityDistrictGroup.add(createTrashCan(14.5, 13));
+
+        const cityLights = [];
+        function createStreetLamp(x, z) {
+            const post = new THREE.Group();
+            post.position.set(x, 0, z);
+            const pole = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.12, 0.16, 5.2, 8),
+                new THREE.MeshStandardMaterial({ color: 0x22262a, metalness: 0.8, roughness: 0.3 })
+            );
+            pole.position.y = 2.6; pole.castShadow = true; post.add(pole);
+
+            const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffea90 }));
+            bulb.position.y = 5.2; post.add(bulb);
+
+            const lampLight = new THREE.PointLight(0xffdf88, 0, 26);
+            lampLight.position.y = 5.0; 
+            lampLight.castShadow = false; 
+            post.add(lampLight);
+            cityLights.push(lampLight);
+            return post;
+        }
+
+        const lampPositions = [
+            { x: -14, z: -18 }, { x: 14, z: -18 },
+            { x: -14, z: 12 },  { x: 14, z: 12 },
+            { x: -14, z: 38 },  { x: 14, z: 38 }
+        ];
+        lampPositions.forEach(lp => cityDistrictGroup.add(createStreetLamp(lp.x, lp.z)));
+
+        const standGroup = new THREE.Group();
+        standGroup.position.set(0, 0, 0);
+        cityDistrictGroup.add(standGroup);
+
+        const basePodium = new THREE.Mesh(
+            new THREE.CylinderGeometry(6.6, 7.2, 0.45, 36),
+            new THREE.MeshStandardMaterial({ color: 0x2e3238, roughness: 0.85 })
+        );
+        basePodium.position.y = 0.225; basePodium.receiveShadow = true; standGroup.add(basePodium);
+
+        const topPodium = new THREE.Mesh(
+            new THREE.CylinderGeometry(5.2, 5.6, 0.4, 36),
+            new THREE.MeshStandardMaterial({ color: 0x484e57, roughness: 0.7 })
+        );
+        topPodium.position.y = 0.65; topPodium.receiveShadow = true; standGroup.add(topPodium);
+
+        const brassRim = new THREE.Mesh(
+            new THREE.TorusGeometry(5.2, 0.08, 12, 48),
+            new THREE.MeshStandardMaterial({ color: 0xcca038, metalness: 0.85, roughness: 0.25 })
+        );
+        brassRim.rotation.x = Math.PI / 2; brassRim.position.y = 0.85; standGroup.add(brassRim);
+
+        const standSpotlight = new THREE.PointLight(0xffe6a8, 0, 24);
+        standSpotlight.position.set(0, 4.0, 0); 
+        standSpotlight.castShadow = false; 
+        standGroup.add(standSpotlight); 
+        cityLights.push(standSpotlight);
+
+        loader.load('polar_bear_ornament/scene.gltf', (gltf) => {
+            try {
+                const m = gltf.scene;
+                m.updateMatrixWorld(true);
+                const box = new THREE.Box3().setFromObject(m);
+                const scale = 2.1 / (box.getSize(new THREE.Vector3()).y || 1);
+                m.scale.setScalar(scale);
+                m.position.set(-2.2, 0.85 - box.min.y * scale, 0.4);
+                m.rotation.y = 0.4;
+                standGroup.add(m);
+            } catch(e) {}
+        }, undefined, () => {});
+
+        loader.load('low_poly_bear_3d_model_free/scene.gltf', (gltf) => {
+            try {
+                const m = gltf.scene;
+                m.updateMatrixWorld(true);
+                const box = new THREE.Box3().setFromObject(m);
+                const scale = 2.3 / (box.getSize(new THREE.Vector3()).y || 1);
+                m.scale.setScalar(scale);
+                m.position.set(2.2, 0.85 - box.min.y * scale, 0.4);
+                m.rotation.y = -0.5;
+                standGroup.add(m);
+            } catch(e) {}
+        }, undefined, () => {});
+
+        loader.load('deer/scene.gltf', (gltf) => {
+            try {
+                const m = gltf.scene;
+                m.updateMatrixWorld(true);
+                const box = new THREE.Box3().setFromObject(m);
+                const scale = 2.0 / (box.getSize(new THREE.Vector3()).y || 1);
+                m.scale.setScalar(scale);
+                m.position.set(0.0, 0.85 - box.min.y * scale, -2.0);
+                standGroup.add(m);
+            } catch(e) {}
+        }, undefined, () => {});
+
+        loader.load('rabbit/scene.gltf', (gltf) => {
+            try {
+                const m = gltf.scene;
+                m.updateMatrixWorld(true);
+                const box = new THREE.Box3().setFromObject(m);
+                const scale = 0.75 / (box.getSize(new THREE.Vector3()).y || 1);
+                m.scale.setScalar(scale);
+                m.position.set(0.0, 0.85 - box.min.y * scale, 2.6);
+                m.rotation.y = Math.PI;
+                standGroup.add(m);
+            } catch(e) {}
+        }, undefined, () => {});
+
+        function enableCity() {
+            if (isCityActive) return;
+            isCityActive = true;
+            cityDistrictGroup.visible = true;
+            cityLights.forEach(light => {
+                light.intensity = (light === standSpotlight) ? 2.8 : 1.8;
+            });
+        }
+
+        // 8.4 ЗВУКИ
+        let audioCtx = null;
+        let riverNoiseGain = null;
+
+        function initAudio() {
+            if (audioCtx) return;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const bufferSize = audioCtx.sampleRate * 2;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                let b0 = 0, b1 = 0, b2 = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    b0 = 0.99886 * b0 + white * 0.0555179;
+                    b1 = 0.99332 * b1 + white * 0.0750759;
+                    b2 = 0.96900 * b2 + white * 0.1538520;
+                    output[i] = (b0 + b1 + b2) * 0.12;
+                }
+
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+                whiteNoise.loop = true;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 650;
+
+                riverNoiseGain = audioCtx.createGain();
+                riverNoiseGain.gain.value = 0.0;
+
+                whiteNoise.connect(filter);
+                filter.connect(riverNoiseGain);
+                riverNoiseGain.connect(audioCtx.destination);
+                whiteNoise.start();
+            } catch (e) {}
+        }
+
+        function playWaterSplashSound() {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(70, audioCtx.currentTime + 0.35);
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.38);
+            } catch (e) {}
+        }
+
+        window.addEventListener('keydown', initAudio, { once: true });
+        window.addEventListener('mousedown', initAudio, { once: true });
+
+        // 8.5 ЛОГІКА ТОЧОК ТА ПЕРЕХОДІВ
+        const screenFadeEl = document.getElementById('screen-fade');
+        const huntSubtitleEl = document.getElementById('hunt-subtitle');
+        const activeWpMarkerEl = document.getElementById('active-wp-marker');
+
+        function triggerFailureDarkness() {
+            if (screenFadeEl) {
+                screenFadeEl.classList.remove('flash-fail');
+                void screenFadeEl.offsetWidth;
+                screenFadeEl.classList.add('flash-fail');
+            }
+        }
+
+        let isCameraRotatingToWp = false;
+        let targetCamHorizontalAngle = 0;
+
+        function rotateCameraToTarget(x, z) {
+            const dx = x - bearContainer.position.x;
+            const dz = z - bearContainer.position.z;
+            targetCamHorizontalAngle = Math.atan2(-dx, -dz);
+            isCameraRotatingToWp = true;
+        }
+
+        setTimeout(() => rotateCameraToTarget(day1Waypoints[0].x, day1Waypoints[0].z), 800);
+
+        function showWarningSubtitle(text) {
+            if (huntSubtitleEl) {
+                huntSubtitleEl.innerText = text;
+                huntSubtitleEl.style.color = "#ff6a6a";
+                clearTimeout(warningSubtitleTimer);
+                warningSubtitleTimer = setTimeout(() => {
+                    huntSubtitleEl.style.color = "#ffffff";
+                    warningSubtitleTimer = null;
+                }, 2600);
+            }
+        }
+
+        function collectActiveWaypoint() {
+            const currentWps = getCurrentMissionWaypoints();
+            triggerFailureDarkness();
+
+            if (gameStage === 1) {
+                activeWaypointIndex++;
+                if (activeWaypointIndex === 1) {
+                    targetHour = 17.9;
+                    const nextWp = currentWps[1];
+                    setWaypointVisualPos(nextWp.x, nextWp.z);
+                    if (animalsList[1]) animalsList[1].group.visible = true;
+                    rotateCameraToTarget(nextWp.x, nextWp.z);
+                    if (huntSubtitleEl) huntSubtitleEl.innerText = "Здобич утекла... Сонце сідає, вечірній слід оленя... (Точка 2 з 3)";
+                } else if (activeWaypointIndex === 2) {
+                    targetHour = 23.8;
+                    const nextWp = currentWps[2];
+                    setWaypointVisualPos(nextWp.x, nextWp.z);
+                    if (animalsList[2]) animalsList[2].group.visible = true;
+                    rotateCameraToTarget(nextWp.x, nextWp.z);
+                    if (huntSubtitleEl) huntSubtitleEl.innerText = "Олень утік... Спустилася темна ніч... (Точка 3 з 3)";
+                } else {
+                    isNightSleepingStage = true;
+                    wpVisualGroup.visible = false;
+                    if (huntSubtitleEl) huntSubtitleEl.innerText = "Невдача, пора спати... [Натисніть T]";
+                }
+            } else if (gameStage === 2) {
+                playWaterSplashSound();
+                activeWaypointIndex++;
+                if (activeWaypointIndex < currentWps.length) {
+                    if (activeWaypointIndex === 1) targetHour = 15.0;
+                    if (activeWaypointIndex === 2) targetHour = 17.9;
+                    if (activeWaypointIndex === 3) targetHour = 20.8;
+                    if (activeWaypointIndex === 4) targetHour = 23.5;
+
+                    const nextWp = currentWps[activeWaypointIndex];
+                    setWaypointVisualPos(nextWp.x, nextWp.z, true);
+                    rotateCameraToTarget(nextWp.x, nextWp.z);
+                    if (huntSubtitleEl) huntSubtitleEl.innerText = `Риба вислизнула! Слід ${activeWaypointIndex + 1} з 5...`;
+                } else {
+                    targetHour = 23.8;
+                    wpVisualGroup.visible = false;
+                    isNightSleepingStage = true;
+                }
+            } else if (gameStage === 3) {
+                activeWaypointIndex++;
+                if (activeWaypointIndex === 1) {
+                    targetHour = 16.0;
+                    const nextWp = currentWps[1];
+                    setWaypointVisualPos(nextWp.x, nextWp.z);
+                    if (animalsList[1]) {
+                        animalsList[1].group.position.set(nextWp.x, getTerrainHeight(nextWp.x, nextWp.z), nextWp.z);
+                        animalsList[1].group.visible = true;
+                        animalsList[1].fleeing = false;
+                        animalsList[1].fled = false;
+                    }
+                    rotateCameraToTarget(nextWp.x, nextWp.z);
+                    if (huntSubtitleEl) huntSubtitleEl.innerText = "Заєць утік! Слід оленя веде до річки... (Слід 2 з 6)";
+                } else if (activeWaypointIndex >= 2 && activeWaypointIndex < 6) {
+                    playWaterSplashSound();
+                    if (activeWaypointIndex === 2) targetHour = 17.9;
+                    if (activeWaypointIndex === 3) targetHour = 20.0;
+                    if (activeWaypointIndex === 4) targetHour = 22.0;
+                    if (activeWaypointIndex === 5) targetHour = 23.5;
+
+                    const nextWp = currentWps[activeWaypointIndex];
+                    setWaypointVisualPos(nextWp.x, nextWp.z, true);
+
+                    const fishIdx = activeWaypointIndex - 2;
+                    if (fishList[fishIdx]) {
+                        fishList[fishIdx].mesh.position.set(nextWp.x, WATER_Y - 0.2, nextWp.z);
+                        fishList[fishIdx].mesh.visible = true;
+                    }
+
+                    rotateCameraToTarget(nextWp.x, nextWp.z);
+                    if (huntSubtitleEl) huntSubtitleEl.innerText = `Сплеск риби у річці! (Слід ${activeWaypointIndex + 1} з 6)...`;
+                } else {
+                    targetHour = 23.8;
+                    wpVisualGroup.visible = false;
+                    isNightSleepingStage = true;
+                }
+            } else if (gameStage === 4) {
+                isCitySleepStage = true;
+                wpVisualGroup.visible = false;
+                if (huntSubtitleEl) {
+                    huntSubtitleEl.innerText = "Стомлений і знесилений ведмідь дійшов до стенду з тваринами у темряві ночі... Лягти спати [Натисніть T]";
+                }
+            }
+        }
+
+        function updateAnimals(delta, bx, bz) {
+            if (activeWaypointIndex < 2 || gameStage === 1) {
+                for (let a of animalsList) {
+                    if (a.mixer) a.mixer.update(delta);
+
+                    if (a.wpIndex === activeWaypointIndex && !a.fled && a.group.visible) {
+                        const distToBear = Math.hypot(bx - a.group.position.x, bz - a.group.position.z);
+
+                        if (distToBear < 11.5 && !a.fleeing) {
+                            a.fleeing = true;
+                            const dir = new THREE.Vector3(a.group.position.x - bx, 0, a.group.position.z - bz).normalize();
+                            dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.randFloatSpread(0.6));
+                            a.fleeDirection.copy(dir);
+
+                            if (a.runAction) {
+                                if (a.activeAction) a.activeAction.fadeOut(0.2);
+                                a.runAction.reset().fadeIn(0.2).play();
+                            }
+                        }
+
+                        if (a.fleeing) {
+                            const fleeSpeed = a.type === 'rabbit' ? 11.0 : 14.0;
+                            a.group.position.addScaledVector(a.fleeDirection, fleeSpeed * delta);
+                            a.group.lookAt(a.group.position.clone().add(a.fleeDirection));
+                            const gy = getTerrainHeight(a.group.position.x, a.group.position.z);
+                            const hop = Math.abs(Math.sin(clock.getElapsedTime() * 12.0)) * 0.35;
+                            a.group.position.y = gy + hop;
+
+                            if (distToBear > 45.0) {
+                                a.fled = true;
+                                a.group.visible = false;
+                            }
+                        }
+                    }
+                }
+            }
+
+            const t = clock.getElapsedTime();
+            fishList.forEach((f) => {
+                if (f.mesh.visible) {
+                    f.mesh.rotation.y = t * 2.0;
+                    f.mesh.position.y = WATER_Y - 0.25 + Math.sin(t * 3.0) * 0.1;
+                }
+            });
+
+            if (riverNoiseGain && audioCtx) {
+                const distToRiver = Math.abs(bz - RIVER_Z);
+                const volume = THREE.MathUtils.clamp(1.0 - distToRiver / 65.0, 0.0, 0.35);
+                riverNoiseGain.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.15);
+            }
+        }
+
+        // 8.6 СОН І ПЕРЕХОДИ
+        function sleepAndAdvanceDay() {
+            if (!screenFadeEl) return;
+            screenFadeEl.classList.add('sleep-black');
+
+            if (huntSubtitleEl) huntSubtitleEl.innerText = "Ведмідь засинає під зорями...";
+
+            setTimeout(() => {
+                gameStage++;
+                activeWaypointIndex = 0;
+                isNightSleepingStage = false;
+                isCitySleepStage = false;
+
+                animalsList.forEach((a) => {
+                    a.fleeing = false;
+                    a.fled = false;
+                    a.group.visible = false;
+                });
+                fishList.forEach(f => { f.mesh.visible = false; });
+
+                if (gameStage === 2) {
+                    currentDayDisplay = "День 2 / 10";
+                    targetHour = 9.5;
+                    currentHour = 9.5;
+                    const firstFishWp = day2RiverWaypoints[0];
+                    setWaypointVisualPos(firstFishWp.x, firstFishWp.z, true);
+                    if (fishList[0]) fishList[0].mesh.visible = true;
+                    if (huntSubtitleEl) huntSubtitleEl.innerText = "День 2. Чутно шум води... Треба дійти до річки та вполювати рибу.";
+                    rotateCameraToTarget(firstFishWp.x, firstFishWp.z);
+                } else if (gameStage === 3) {
+                    currentDayDisplay = "День 3-6 / 10";
+                    targetHour = 9.5;
+                    currentHour = 9.5;
+                    const firstWp = combinedWaypoints[0];
+                    setWaypointVisualPos(firstWp.x, firstWp.z, false);
+                    if (animalsList[0]) {
+                        animalsList[0].group.position.set(firstWp.x, getTerrainHeight(firstWp.x, firstWp.z), firstWp.z);
+                        animalsList[0].group.visible = true;
+                        animalsList[0].fleeing = false;
+                        animalsList[0].fled = false;
+                    }
+                    if (huntSubtitleEl) huntSubtitleEl.innerText = "День 3-6. Минають дні пошуків... Знову вистежуємо здобич та рибу.";
+                    rotateCameraToTarget(firstWp.x, firstWp.z);
+                } else if (gameStage === 4) {
+                    currentDayDisplay = "День 7 / 10";
+                    targetHour = 12.0;
+                    currentHour = 12.0;
+                    setWaypointVisualPos(CITY_X, CITY_Z, false);
+                    if (huntSubtitleEl) {
+                        huntSubtitleEl.innerText = "День 7. Знесилений ведмідь вирушає в далеку дорогу до міста...";
+                    }
+                    rotateCameraToTarget(CITY_X, CITY_Z);
+                } else if (gameStage >= 5) {
+                    currentDayDisplay = "День 10 / 10";
+                    targetHour = 9.0;
+                    currentHour = 9.0;
+                    wpVisualGroup.visible = false;
+                    if (huntSubtitleEl) {
+                        huntSubtitleEl.innerText = "День 10. Фінал. Знесилений ведмідь нарешті знайшов спокій і прихисток біля нових друзів.";
+                    }
+                }
+
+                setTimeout(() => {
+                    screenFadeEl.classList.remove('sleep-black');
+                }, 800);
+            }, 1800);
+        }
+
+        // 9. ХУТРО ТА ШЕЙДЕРИ СНУ
+        const bearShaderUniforms = {
+            uNoseTip: { value: new THREE.Vector3(0, 0, 0) },
+            uMinY: { value: 0.0 },
+            uTotalH: { value: 1.0 },
+            uTotalW: { value: 1.0 },
+            uTotalL: { value: 1.0 },
+            uCenterX: { value: 0.0 },
+            uCenterZ: { value: 0.0 },
+            uSleepFactor: { value: 0.0 }
+        };
+
+        function applySleepVertexShader(shader) {
+            shader.uniforms.uNoseTip = bearShaderUniforms.uNoseTip;
+            shader.uniforms.uMinY = bearShaderUniforms.uMinY;
+            shader.uniforms.uTotalH = bearShaderUniforms.uTotalH;
+            shader.uniforms.uTotalW = bearShaderUniforms.uTotalW;
+            shader.uniforms.uTotalL = bearShaderUniforms.uTotalL;
+            shader.uniforms.uCenterX = bearShaderUniforms.uCenterX;
+            shader.uniforms.uCenterZ = bearShaderUniforms.uCenterZ;
+            shader.uniforms.uSleepFactor = bearShaderUniforms.uSleepFactor;
+
+            shader.vertexShader = `
+                varying vec3 vLocalPos;
+                uniform float uMinY;
+                uniform float uTotalH;
+                uniform float uTotalW;
+                uniform float uTotalL;
+                uniform float uCenterX;
+                uniform float uCenterZ;
+                uniform float uSleepFactor;
+            ` + shader.vertexShader;
+
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <begin_vertex>',
+                `
+                #include <begin_vertex>
+                vLocalPos = position;
+                `
+            );
+
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <project_vertex>',
+                `
+                if (uSleepFactor > 0.001) {
+                    float s = smoothstep(0.0, 1.0, uSleepFactor);
+                    float heightFromBase = transformed.y - uMinY;
+                    float bodyWeight = smoothstep(uTotalH * 0.10, uTotalH * 0.65, heightFromBase);
+                    
+                    float zNorm = clamp((transformed.z - uCenterZ) / (uTotalL * 0.5), -1.0, 1.0);
+                    float forwardBias = 1.0 + zNorm * 0.15;
+                    transformed.y -= (uTotalH * 0.32) * bodyWeight * forwardBias * s;
+
+                    if (transformed.z > uCenterZ + uTotalL * 0.12) {
+                        float headProgress = clamp((transformed.z - (uCenterZ + uTotalL * 0.12)) / (uTotalL * 0.36), 0.0, 1.0);
+                        float headFold = smoothstep(0.0, 1.0, headProgress) * s;
+                        transformed.y -= (uTotalH * 0.16) * headFold;
+                        transformed.z += (uTotalL * 0.05) * headFold;
+                    }
+
+                    if (heightFromBase < uTotalH * 0.40) {
+                        float legProg = 1.0 - clamp(heightFromBase / (uTotalH * 0.40), 0.0, 1.0);
+                        float pawFold = smoothstep(0.0, 1.0, legProg) * s;
+
+                        if (transformed.z > uCenterZ) {
+                            transformed.z += (uTotalL * 0.04) * pawFold;
+                            transformed.x = mix(transformed.x, uCenterX + (transformed.x - uCenterX) * 0.7, pawFold * 0.4);
+                        } else {
+                            transformed.z += (uTotalL * 0.08) * pawFold;
+                            transformed.x = mix(transformed.x, uCenterX + (transformed.x - uCenterX) * 0.8, pawFold * 0.3);
+                        }
+                    }
+
+                    if (transformed.y < uMinY) transformed.y = uMinY;
+                }
+                #include <project_vertex>
+                `
+            );
+        }
+
+        const bearCustomFurMaterial = new THREE.MeshStandardMaterial({
+            color: 0x362114,
+            roughness: 0.95,
+            metalness: 0.0,
+            side: THREE.FrontSide
+        });
+
+        bearCustomFurMaterial.onBeforeCompile = (shader) => {
+            applySleepVertexShader(shader);
+            shader.fragmentShader = `
+                varying vec3 vLocalPos;
+                uniform vec3 uNoseTip;
+                uniform float uMinY;
+                uniform float uTotalH;
+                uniform float uTotalW;
+                uniform float uTotalL;
+            ` + shader.fragmentShader;
+
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <dithering_fragment>',
+                `
+                #include <dithering_fragment>
+                float legY = vLocalPos.y - uMinY;
+                float pawMask = 1.0 - smoothstep(uTotalH * 0.22, uTotalH * 0.36, legY);
+
+                vec3 muzzleCenter = uNoseTip + vec3(0.0, uTotalH * 0.04, -uTotalL * 0.07);
+                vec3 diff = vLocalPos - muzzleCenter;
+
+                float dX = diff.x / (uTotalW * 0.20);
+                float dY = diff.y / (uTotalH * 0.20);
+                float dZ = diff.z / (uTotalL * 0.18);
+
+                float faceDist = length(vec3(dX, dY, dZ));
+                float muzzleMask = smoothstep(1.15, 0.70, faceDist);
+                float blackMask = clamp(pawMask + muzzleMask, 0.0, 1.0);
+
+                if (blackMask > 0.0) {
+                    vec3 blackFur = vec3(0.028, 0.025, 0.023);
+                    gl_FragColor.rgb = mix(gl_FragColor.rgb, blackFur, blackMask * 0.98);
+                }
+                `
+            );
+        };
+
+        const eyeCustomMaterial = new THREE.MeshStandardMaterial({
+            color: 0x050505,
+            roughness: 0.08,
+            metalness: 0.1
+        });
+        eyeCustomMaterial.onBeforeCompile = (shader) => {
+            applySleepVertexShader(shader);
+        };
+
+        // 10. ЗАВАНТАЖЕННЯ ВЕДМЕДЯ
+        const bearContainer = new THREE.Group();
+        scene.add(bearContainer);
+
+        const bearSleepPivot = new THREE.Group();
+        bearContainer.add(bearSleepPivot);
+
+        let bearModel = null;
+        let mixer = null;
+        const actions = {};
+        let activeAction = null;
+
+        function switchAnimation(name) {
+            const nextAction = actions[name];
+            if (!nextAction || activeAction === nextAction) return;
+            if (activeAction) activeAction.fadeOut(0.2);
+            nextAction.reset().fadeIn(0.2).play();
+            activeAction = nextAction;
+        }
+
+        function cleanRootMotion(clip) {
+            if (!clip || !clip.tracks) return;
+            clip.tracks.forEach(track => {
+                const name = track.name.toLowerCase();
+                if (track.name.endsWith('.position') && (name.includes('root') || name.includes('hips') || name.includes('armature') || name.includes('bip01'))) {
+                    const values = track.values;
+                    if (!values || values.length < 3) return;
+
+                    let minZ = Infinity, maxZ = -Infinity;
+                    for (let i = 2; i < values.length; i += 3) {
+                        minZ = Math.min(minZ, values[i]);
+                        maxZ = Math.max(maxZ, values[i]);
+                    }
+                    if (Math.abs(maxZ - minZ) > 0.4) {
+                        const baseZ = values[2];
+                        for (let i = 2; i < values.length; i += 3) values[i] = baseZ;
+                    }
+                    const baseX = values[0];
+                    for (let i = 0; i < values.length; i += 3) {
+                        values[i] = baseX + (values[i] - baseX) * 0.25;
+                    }
+                }
+            });
+        }
+
+        loader.load('scene.gltf', (gltf) => {
+            bearModel = gltf.scene;
+            bearModel.updateMatrixWorld(true);
+            const box = new THREE.Box3().setFromObject(bearModel);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fixedScale = 2.4 / (maxDim || 1);
+            bearModel.scale.setScalar(fixedScale);
+
+            const defaultBaseY = -box.min.y * fixedScale;
+            bearModel.position.x = -center.x * fixedScale;
+            bearModel.position.y = defaultBaseY;
+            bearModel.position.z = -center.z * fixedScale;
+
+            const totalH = box.max.y - box.min.y;
+            const totalW = box.max.x - box.min.x;
+            const totalL = box.max.z - box.min.z;
+
+            bearShaderUniforms.uMinY.value = box.min.y;
+            bearShaderUniforms.uTotalH.value = totalH;
+            bearShaderUniforms.uTotalW.value = totalW;
+            bearShaderUniforms.uTotalL.value = totalL;
+            bearShaderUniforms.uCenterX.value = center.x;
+            bearShaderUniforms.uCenterZ.value = center.z;
+
+            let noseTipVertex = new THREE.Vector3(center.x, box.min.y + totalH * 0.52, box.max.z);
+            let maxZ = -Infinity;
+
+            bearModel.traverse((child) => {
+                if (child.isMesh && child.geometry && child.geometry.attributes.position) {
+                    const pos = child.geometry.attributes.position;
+                    for (let i = 0; i < pos.count; i++) {
+                        const x = pos.getX(i);
+                        const y = pos.getY(i);
+                        const z = pos.getZ(i);
+
+                        if (Math.abs(x - center.x) < totalW * 0.10 &&
+                            y > box.min.y + totalH * 0.40 &&
+                            y < box.min.y + totalH * 0.68) {
+                            if (z > maxZ) {
+                                maxZ = z;
+                                noseTipVertex.set(x, y, z);
+                            }
+                        }
+                    }
+                }
+            });
+
+            bearShaderUniforms.uNoseTip.value.copy(noseTipVertex);
+            bearCustomFurMaterial.needsUpdate = true;
+            eyeCustomMaterial.needsUpdate = true;
+
+            bearModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    const name = (child.name + ' ' + (child.material && child.material.name ? child.material.name : '')).toLowerCase();
+                    if (name.includes('eye') || name.includes('pupil')) {
+                        child.material = eyeCustomMaterial;
+                    } else {
+                        child.material = bearCustomFurMaterial;
+                    }
+                }
+            });
+
+            bearSleepPivot.add(bearModel);
+
+            if (gltf.animations && gltf.animations.length > 0) {
+                mixer = new THREE.AnimationMixer(bearModel);
+                gltf.animations.forEach((clip) => {
+                    cleanRootMotion(clip);
+                    actions[clip.name.toLowerCase()] = mixer.clipAction(clip);
+                });
+
+                const animKeys = Object.keys(actions);
+                const idleKey = animKeys.find(k => k.includes('idle') && !k.includes('walk')) || animKeys[0];
+                const walkKey = animKeys.find(k => k.includes('walk') && !k.includes('run')) || animKeys[1] || idleKey;
+                const runKey = animKeys.find(k => k.includes('run') || k.includes('trot'));
+                const sleepKey = animKeys.find(k => k.includes('sleep') || k.includes('rest') || k.includes('lie') || k.includes('lay'));
+
+                actions.idle = actions[idleKey];
+                actions.walk = actions[walkKey];
+                if (runKey) actions.run = actions[runKey];
+                if (sleepKey) {
+                    actions.sleep = actions[sleepKey];
+                    actions.sleep.clampWhenFinished = true;
+                }
+                switchAnimation('idle');
+            }
+        });
+
+        // 11. ДЕРЕВА
+        const bearCollisionRadius = 0.50;
+        const forestMixers = [];
+
+        function createPineNeedleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 128; canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 128, 128);
+
+            ctx.strokeStyle = '#27190f'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(64, 128); ctx.lineTo(64, 8); ctx.stroke();
+
+            for (let y = 122; y > 12; y -= 3.5) {
+                const t = (128 - y) / 128;
+                const spread = 20 + t * 38;
+                const green = Math.floor(40 + Math.random() * 45);
+                ctx.strokeStyle = `rgb(22, ${green + 30}, 28)`;
+                ctx.lineWidth = 2.4;
+
+                ctx.beginPath(); ctx.moveTo(64, y); ctx.lineTo(64 - spread, y - 7 - Math.random() * 5); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(64, y); ctx.lineTo(64 + spread, y - 7 - Math.random() * 5); ctx.stroke();
+            }
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            return tex;
+        }
+
+        const pineNeedleTex = createPineNeedleTexture();
+
+        function createFirTreeMesh(customHeight = 11.4, isGiant = false) {
+            const group = new THREE.Group();
+            const totalH = customHeight;
+            const trunkRadiusTop = isGiant ? 0.12 : 0.08;
+            const trunkRadiusBottom = isGiant ? 0.65 : 0.42;
+
+            const trunkMat = new THREE.MeshStandardMaterial({
+                color: isGiant ? 0x22130a : 0x2b1a0e,
+                roughness: 0.94,
+                metalness: 0.04
+            });
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(trunkRadiusTop, trunkRadiusBottom, totalH, 9), trunkMat);
+            trunk.position.y = totalH * 0.5;
+            trunk.castShadow = true; trunk.receiveShadow = true;
+            group.add(trunk);
+
+            const foliageMat = new THREE.MeshStandardMaterial({
+                map: pineNeedleTex,
+                color: isGiant ? 0x15381c : 0x1d4624,
+                roughness: 0.65, metalness: 0.05,
+                alphaTest: 0.35, side: THREE.DoubleSide
+            });
+
+            const tiers = isGiant ? 16 : 11;
+            const startY = isGiant ? 2.6 : 1.7;
+            const endY = totalH - 1.4;
+            const maxRadius = isGiant ? 4.6 : 3.4;
+
+            for (let t = 0; t < tiers; t++) {
+                const prog = t / (tiers - 1);
+                const yPos = startY + prog * (endY - startY);
+                const tierRadius = Math.sin((1.0 - prog) * Math.PI * 0.5) * maxRadius * (1.0 - prog * 0.12) + 0.4;
+                const branchCount = Math.max(5, Math.round((isGiant ? 8 : 7) - prog * 3));
+                const droop = THREE.MathUtils.lerp(0.38, -0.06, prog);
+
+                for (let b = 0; b < branchCount; b++) {
+                    const angle = (b / branchCount) * Math.PI * 2 + (t * 0.74) + (Math.random() - 0.5) * 0.22;
+                    const bLen = tierRadius * (0.85 + Math.random() * 0.3);
+                    const subFronds = isGiant ? 4 : 3;
+
+                    for (let f = 1; f <= subFronds; f++) {
+                        const dist = (f / subFronds) * bLen;
+                        const w = (1.1 - (f / subFronds) * 0.35) * (isGiant ? 1.6 : 1.35);
+                        const l = (bLen / subFronds) * (isGiant ? 1.4 : 1.3);
+
+                        const frond = new THREE.Mesh(new THREE.PlaneGeometry(w, l), foliageMat);
+                        frond.castShadow = true; frond.receiveShadow = true;
+                        frond.rotation.x = Math.PI / 2 + droop;
+                        frond.rotation.y = angle;
+
+                        const fx = Math.cos(angle) * dist;
+                        const fz = Math.sin(angle) * dist;
+                        const fy = yPos - Math.sin(droop) * dist * 0.45;
+                        frond.position.set(fx, fy, fz);
+                        group.add(frond);
+
+                        const crossFrond = frond.clone();
+                        crossFrond.rotation.z = 0.35;
+                        group.add(crossFrond);
+                    }
+                }
+            }
+
+            const spire = new THREE.Mesh(
+                new THREE.ConeGeometry(isGiant ? 0.38 : 0.32, isGiant ? 2.4 : 1.6, 6),
+                new THREE.MeshStandardMaterial({ color: isGiant ? 0x112b15 : 0x16381b, roughness: 0.8 })
+            );
+            spire.position.y = totalH - 0.2;
+            spire.castShadow = true;
+            group.add(spire);
+
+            return group;
+        }
+
+        function createProceduralTreeFallback(typeIdx) {
+            const group = new THREE.Group();
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2716, roughness: 0.9 });
+            const leafColors = [0x2e6628, 0x3d7e35, 0x255220, 0x478d38];
+            const leafMat = new THREE.MeshStandardMaterial({ color: leafColors[typeIdx % 4], roughness: 0.8 });
+
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 3.2, 7), trunkMat);
+            trunk.position.y = 1.6;
+            trunk.castShadow = true;
+            group.add(trunk);
+
+            const foliage = new THREE.Mesh(new THREE.ConeGeometry(2.3, 5.5, 7), leafMat);
+            foliage.position.y = 4.8;
+            foliage.castShadow = true;
+            group.add(foliage);
+
+            return group;
+        }
+
+        const treeConfigs = [
+            { path: 'oak_trees/scene.gltf', height: 11.2, colR: 1.05 },
+            { path: 'low_poly_trees_free/scene.gltf', height: 10.0, colR: 0.85 },
+            { path: 'tree_gn/scene.gltf', height: 9.2, colR: 0.78 },
+            { path: 'tree_low_poly_lowpoly/scene.gltf', height: 8.6, colR: 0.75 },
+            { path: '', height: 11.4, colR: 0.95 },
+            { path: '', height: 18.5, colR: 1.45 }
+        ];
+
+        const treePools = [[], [], [], [], [], []];
+        const baseTreeTemplates = [null, null, null, null, null, null];
+        const cityTreeContainers = [];
+
+        function createTreeInstance(template, cfg, typeIdx) {
+            const grp = new THREE.Group();
+            grp.visible = false;
+            grp.scale.setScalar(0.001);
+            if (template) {
+                grp.add(template.clone(true));
+            }
+            scene.add(grp);
+
+            return {
+                group: grp,
+                inUse: false,
+                typeIdx: typeIdx,
+                baseColRadius: cfg.colR,
+                collisionRadius: cfg.colR,
+                x: 0,
+                z: 0,
+                currentScale: 0.001,
+                targetScale: 1.0,
+                isLoaded: false
+            };
+        }
+
+        const standardFirModel = createFirTreeMesh(11.4, false);
+        baseTreeTemplates[4] = standardFirModel;
+        for (let k = 0; k < 45; k++) {
+            treePools[4].push(createTreeInstance(standardFirModel, treeConfigs[4], 4));
+        }
+
+        const giantFirModel = createFirTreeMesh(18.5, true);
+        baseTreeTemplates[5] = giantFirModel;
+        for (let k = 0; k < 35; k++) {
+            treePools[5].push(createTreeInstance(giantFirModel, treeConfigs[5], 5));
+        }
+
+        for (let idx = 0; idx < 4; idx++) {
+            const cfg = treeConfigs[idx];
+            const fallback = createProceduralTreeFallback(idx);
+            baseTreeTemplates[idx] = fallback;
+
+            for (let k = 0; k < 45; k++) {
+                treePools[idx].push(createTreeInstance(fallback, cfg, idx));
+            }
+
+            loader.load(cfg.path, (gltf) => {
+                try {
+                    const model = gltf.scene;
+                    model.updateMatrixWorld(true);
+                    const box = new THREE.Box3().setFromObject(model);
+                    const size = box.getSize(new THREE.Vector3());
+                    const center = box.getCenter(new THREE.Vector3());
+
+                    const scale = cfg.height / (size.y || 1);
+                    model.scale.setScalar(scale);
+                    model.position.x = -center.x * scale;
+                    model.position.y = -box.min.y * scale;
+                    model.position.z = -center.z * scale;
+
+                    model.traverse(c => {
+                        if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
+                    });
+
+                    baseTreeTemplates[idx] = model;
+
+                    treePools[idx].forEach(item => {
+                        while (item.group.children.length > 0) item.group.remove(item.group.children[0]);
+                        item.group.add(model.clone(true));
+                    });
+
+                    cityTreeContainers.forEach(ct => {
+                        if (ct.typeIdx === idx) {
+                            while (ct.holder.children.length > 0) ct.holder.remove(ct.holder.children[0]);
+                            ct.holder.add(model.clone(true));
+                        }
+                    });
+                } catch(e) {}
+            }, undefined, () => {});
+        }
+
+        const cityTreeCoords = [
+            { x: -9.5, z: -35 }, { x: 9.5, z: -35 },
+            { x: -9.5, z: -55 }, { x: 9.5, z: -55 },
+            { x: -9.5, z: -75 }, { x: 9.5, z: -75 },
+            { x: -18, z: -10 }, { x: 18, z: -10 },
+            { x: -18, z: 25 },  { x: 18, z: 25 },
+            { x: -22, z: 42 },  { x: 22, z: 42 },
+            { x: -10, z: 46 },  { x: 10, z: 46 }
+        ];
+
+        cityTreeCoords.forEach((c, i) => {
+            const typeIdx = i % 4;
+            const holder = new THREE.Group();
+            holder.position.set(c.x, 0, c.z);
+            const template = baseTreeTemplates[typeIdx] || createProceduralTreeFallback(typeIdx);
+            holder.add(template.clone(true));
+            const sc = 0.85 + Math.random() * 0.25;
+            holder.scale.setScalar(sc);
+            holder.rotation.y = Math.random() * Math.PI * 2;
+            cityDistrictGroup.add(holder);
+            cityTreeContainers.push({ holder: holder, typeIdx: typeIdx });
+        });
+
+        const CHUNK_SIZE = 18.0; 
+        const activeChunks = new Map();
+
+        function getChunkHash(cx, cz, offset) {
+            let n = Math.sin(cx * 12.9898 + cz * 78.233 + offset * 37.719) * 43758.5453;
+            return n - Math.floor(n);
+        }
+
+        function getTreeFromPool(typeIdx) {
+            const pool = treePools[typeIdx];
+            for (let i = 0; i < pool.length; i++) {
+                if (!pool[i].inUse) {
+                    pool[i].inUse = true;
+                    return pool[i];
+                }
+            }
+            const template = baseTreeTemplates[typeIdx] || createProceduralTreeFallback(typeIdx);
+            const newItem = createTreeInstance(template, treeConfigs[typeIdx], typeIdx);
+            newItem.inUse = true;
+            pool.push(newItem);
+            return newItem;
+        }
+
+        const subOffsets = [
+            { x: 9.0,  z: 9.0 },
+            { x: 4.2,  z: 4.2 },
+            { x: 13.8, z: 4.2 },
+            { x: 4.2,  z: 13.8 },
+            { x: 13.8, z: 13.8 }
+        ];
+
+        function spawnChunk(cx, cz) {
+            const key = `${cx},${cz}`;
+            if (activeChunks.has(key)) return;
+
+            const treesInChunk = [];
+            const baseX = cx * CHUNK_SIZE;
+            const baseZ = cz * CHUNK_SIZE;
+
+            for (let i = 0; i < subOffsets.length; i++) {
+                const typeIdx = Math.abs((cx * 3 + cz * 7 + i)) % 6;
+                const tree = getTreeFromPool(typeIdx);
+                if (!tree) continue;
+
+                const so = subOffsets[i];
+                const jitterX = (getChunkHash(cx, cz, i * 4 + 1) - 0.5) * 3.5;
+                const jitterZ = (getChunkHash(cx, cz, i * 4 + 2) - 0.5) * 3.5;
+
+                const wx = baseX + so.x + jitterX;
+                const wz = baseZ + so.z + jitterZ;
+
+                if (Math.hypot(wx, wz) < 4.0 || Math.hypot(wx, wz - (-6.5)) < 3.2) {
+                    tree.inUse = false;
+                    continue;
+                }
+
+                if (Math.abs(wz - getRiverCenter(wx)) < RIVER_WIDTH + 1.5) {
+                    tree.inUse = false;
+                    continue;
+                }
+
+                if (Math.hypot(wx - CITY_X, wz - CITY_Z) < 68.0 || (Math.abs(wx - CITY_X) < 16.0 && wz > 410.0 && wz < 500.0)) {
+                    tree.inUse = false;
+                    continue;
+                }
+
+                const wy = getTerrainHeight(wx, wz);
+                const rotY = getChunkHash(cx, cz, i * 4 + 3) * Math.PI * 2;
+                const scaleVar = 0.85 + getChunkHash(cx, cz, i * 4 + 4) * 0.40;
+
+                tree.x = wx;
+                tree.z = wz;
+                tree.targetScale = scaleVar;
+                tree.currentScale = 0.001;
+                tree.collisionRadius = tree.baseColRadius * scaleVar;
+                tree.isLoaded = false;
+
+                tree.group.position.set(wx, wy, wz);
+                tree.group.rotation.y = rotY;
+                tree.group.scale.setScalar(0.001);
+                tree.group.visible = false;
+
+                treesInChunk.push(tree);
+            }
+
+            activeChunks.set(key, treesInChunk);
+        }
+
+        function despawnChunk(key) {
+            const trees = activeChunks.get(key);
+            if (!trees) return;
+            for (let i = 0; i < trees.length; i++) {
+                const t = trees[i];
+                t.inUse = false;
+                t.group.visible = false;
+                t.group.scale.setScalar(0.001);
+                t.isLoaded = false;
+            }
+            activeChunks.delete(key);
+        }
+
+        function updateInfiniteForest(bx, bz, delta) {
+            const curChunkX = Math.floor(bx / CHUNK_SIZE);
+            const curChunkZ = Math.floor(bz / CHUNK_SIZE);
+            const CHUNK_RADIUS = 3;
+
+            for (let dx = -CHUNK_RADIUS; dx <= CHUNK_RADIUS; dx++) {
+                for (let dz = -CHUNK_RADIUS; dz <= CHUNK_RADIUS; dz++) {
+                    spawnChunk(curChunkX + dx, curChunkZ + dz);
+                }
+            }
+
+            for (let key of activeChunks.keys()) {
+                const [cx, cz] = key.split(',').map(Number);
+                if (Math.abs(cx - curChunkX) > (CHUNK_RADIUS + 1) || Math.abs(cz - curChunkZ) > (CHUNK_RADIUS + 1)) {
+                    despawnChunk(key);
+                }
+            }
+
+            const LOAD_INNER_RADIUS = 32.0;
+            const LOAD_OUTER_RADIUS = 55.0;
+
+            for (let trees of activeChunks.values()) {
+                for (let i = 0; i < trees.length; i++) {
+                    const tree = trees[i];
+                    const dist = Math.hypot(tree.x - bx, tree.z - bz);
+
+                    let targetFactor = 0.0;
+                    if (dist < LOAD_INNER_RADIUS) {
+                        targetFactor = 1.0;
+                    } else if (dist < LOAD_OUTER_RADIUS) {
+                        targetFactor = 1.0 - (dist - LOAD_INNER_RADIUS) / (LOAD_OUTER_RADIUS - LOAD_INNER_RADIUS);
+                    }
+
+                    tree.currentScale = THREE.MathUtils.lerp(tree.currentScale, targetFactor * tree.targetScale, 4.0 * delta);
+
+                    if (tree.currentScale > 0.02) {
+                        tree.group.visible = true;
+                        tree.group.scale.setScalar(tree.currentScale);
+                        tree.isLoaded = tree.currentScale > (tree.targetScale * 0.6);
+                    } else {
+                        tree.group.visible = false;
+                        tree.isLoaded = false;
+                    }
+                }
+            }
+        }
+
+        function resolveDynamicCollisions(pos) {
+            for (let trees of activeChunks.values()) {
+                for (let i = 0; i < trees.length; i++) {
+                    const tree = trees[i];
+                    if (!tree.isLoaded) continue;
+
+                    const dx = pos.x - tree.x;
+                    const dz = pos.z - tree.z;
+                    if (Math.abs(dx) > 3.0 || Math.abs(dz) > 3.0) continue;
+
+                    const minDist = bearCollisionRadius + tree.collisionRadius;
+                    const distSq = dx * dx + dz * dz;
+
+                    if (distSq < minDist * minDist) {
+                        const dist = Math.sqrt(distSq) || 0.001;
+                        const push = minDist - dist;
+                        pos.x += (dx / dist) * push;
+                        pos.z += (dz / dist) * push;
+                    }
+                }
+            }
+
+            if (isCityActive) {
+                for (let obs of cityObstacles) {
+                    const dx = pos.x - obs.x;
+                    const dz = pos.z - obs.z;
+                    if (Math.abs(dx) > 3.5 || Math.abs(dz) > 3.5) continue;
+                    const minDist = bearCollisionRadius + obs.r;
+                    const distSq = dx * dx + dz * dz;
+                    if (distSq < minDist * minDist) {
+                        const dist = Math.sqrt(distSq) || 0.001;
+                        const push = minDist - dist;
+                        pos.x += (dx / dist) * push;
+                        pos.z += (dz / dist) * push;
+                    }
+                }
+            }
+        }
+
+        // 12. ВІДОБРАЖЕННЯ МАРКЕРА
+        const tempVec = new THREE.Vector3();
+        const camDir = new THREE.Vector3();
+
+        function updateWaypointsOnScreen(elapsedTime) {
+            if (isNightSleepingStage || isCitySleepStage || !wpVisualGroup.visible) {
+                if (activeWpMarkerEl) activeWpMarkerEl.style.display = 'none';
+                return;
+            }
+
+            camera.getWorldDirection(camDir);
+
+            if (ringMesh) {
+                const pulse = 1.0 + Math.sin(elapsedTime * 3.5) * 0.08;
+                ringMesh.scale.set(pulse, pulse, pulse);
+            }
+
+            const currentWps = getCurrentMissionWaypoints();
+            const currentWp = currentWps[activeWaypointIndex];
+
+            if (!currentWp) {
+                if (activeWpMarkerEl) activeWpMarkerEl.style.display = 'none';
+                return;
+            }
+
+            const dist = Math.hypot(bearContainer.position.x - currentWp.x, bearContainer.position.z - currentWp.z);
+            const threshold = (gameStage === 4) ? 4.8 : 3.2;
+
+            if (dist < threshold) {
+                collectActiveWaypoint();
+                return;
+            }
+
+            const wpY = (currentWp.type === 'fish') ? WATER_Y : getSurfaceHeight(currentWp.x, currentWp.z);
+            tempVec.set(currentWp.x, wpY + 1.2, currentWp.z);
+
+            const toPoint = tempVec.clone().sub(camera.position);
+            const isForward = toPoint.dot(camDir) > 0.1;
+
+            if (!isForward) {
+                if (activeWpMarkerEl) activeWpMarkerEl.style.display = 'none';
+                return;
+            }
+
+            tempVec.project(camera);
+
+            const x = (tempVec.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-(tempVec.y * 0.5) + 0.5) * window.innerHeight;
+
+            if (x < 15 || x > window.innerWidth - 15 || y < 15 || y > window.innerHeight - 15) {
+                if (activeWpMarkerEl) activeWpMarkerEl.style.display = 'none';
+                return;
+            }
+
+            if (activeWpMarkerEl) {
+                activeWpMarkerEl.style.display = 'flex';
+                activeWpMarkerEl.style.left = `${x}px`;
+                activeWpMarkerEl.style.top = `${y}px`;
+                const labelEl = activeWpMarkerEl.querySelector('.waypoint-label');
+                labelEl.innerText = `${Math.round(dist)} м`;
+            }
+        }
+
+        // 13. КЕРУВАННЯ
+        const keys = {};
+        let isSleeping = false;
+        let sleepFactor = 0.0;
+        let isFastForward = false;
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'KeyT') {
+                if (isCitySleepStage && gameStage === 4) {
+                    isSleeping = true;
+                    sleepAndAdvanceDay();
+                    return;
+                }
+
+                if (isNightSleepingStage) {
+                    const rCenter = getRiverCenter(bearContainer.position.x);
+                    const distToWaterEdge = Math.max(0, Math.abs(bearContainer.position.z - rCenter) - RIVER_WIDTH);
+
+                    if (distToWaterEdge < 15.0) {
+                        isSleeping = false;
+                        const remaining = Math.ceil(15.0 - distToWaterEdge);
+                        showWarningSubtitle(`У воді та біля берега спати не можна! Відійдіть на сушу ще ${remaining} м...`);
+                        return;
+                    } else {
+                        isSleeping = true;
+                        sleepAndAdvanceDay();
+                        return;
+                    }
+                }
+                isSleeping = !isSleeping;
+            }
+            if (e.code === 'KeyN') isFastForward = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+            if (e.code === 'KeyN') isFastForward = false;
+        });
+
+        controls.addEventListener('start', () => {
+            isCameraRotatingToWp = false;
+        });
+
+        // 14. ГОЛОВНИЙ ЦИКЛ РЕНДЕРИНГУ
+        const clock = new THREE.Clock();
+        const baseBearSpeed = 4.6;
+        const turnSpeed = 3.2;
+        let smoothedSpeed = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = Math.min(clock.getDelta(), 0.08);
+            const elapsedTime = clock.getElapsedTime();
+
+            skyUniforms.uTime.value = elapsedTime;
+            grassWindUniforms.uTime.value = elapsedTime;
+            skyDome.position.copy(camera.position);
+
+            waterNormalMap.offset.x += delta * 0.04;
+            waterNormalMap.offset.y += delta * 0.02;
+
+            updateDayNightCycle(delta, isFastForward);
+
+            if (mixer) mixer.update(delta);
+            for (let i = 0; i < forestMixers.length; i++) {
+                forestMixers[i].update(delta);
+            }
+
+            const isForward  = keys['KeyW'] || keys['ArrowUp'];
+            const isBackward = keys['KeyS'] || keys['ArrowDown'];
+            const isLeft     = keys['KeyA'] || keys['ArrowLeft'];
+            const isRight    = keys['KeyD'] || keys['ArrowRight'];
+            const isSprint   = keys['ShiftLeft'] || keys['ShiftRight'];
+
+            if (isForward || isBackward || isLeft || isRight) isSleeping = false;
+
+            const targetSleep = isSleeping ? 1.0 : 0.0;
+            sleepFactor = THREE.MathUtils.lerp(sleepFactor, targetSleep, 2.0 * delta);
+            bearShaderUniforms.uSleepFactor.value = sleepFactor;
+
+            if (actions.sleep) {
+                if (isSleeping) {
+                    switchAnimation('sleep');
+                } else if (sleepFactor < 0.2) {
+                    switchAnimation('idle');
+                }
+            } else if (actions.idle) {
+                actions.idle.timeScale = THREE.MathUtils.lerp(1.0, 0.40, sleepFactor);
+            }
+
+            const currentSpeedMultiplier = isSprint ? 1.85 : 1.0;
+            const currentBearSpeed = baseBearSpeed * currentSpeedMultiplier;
+
+            if (!isSleeping && sleepFactor < 0.15) {
+                if (isLeft) bearContainer.rotation.y += turnSpeed * delta;
+                if (isRight) bearContainer.rotation.y -= turnSpeed * delta;
+
+                let targetSpeed = 0;
+                if (isForward) targetSpeed = currentBearSpeed;
+                else if (isBackward) targetSpeed = -currentBearSpeed * 0.6;
+
+                smoothedSpeed = THREE.MathUtils.lerp(smoothedSpeed, targetSpeed, 14.0 * delta);
+
+                if (Math.abs(smoothedSpeed) > 0.05) {
+                    const forwardVector = new THREE.Vector3(
+                        Math.sin(bearContainer.rotation.y),
+                        0,
+                        Math.cos(bearContainer.rotation.y)
+                    );
+
+                    const targetPos = {
+                        x: bearContainer.position.x + forwardVector.x * (smoothedSpeed * delta),
+                        z: bearContainer.position.z + forwardVector.z * (smoothedSpeed * delta)
+                    };
+
+                    resolveDynamicCollisions(targetPos);
+
+                    const maxGroundRadius = 720.0;
+                    bearContainer.position.x = THREE.MathUtils.clamp(targetPos.x, -maxGroundRadius, maxGroundRadius);
+                    bearContainer.position.z = THREE.MathUtils.clamp(targetPos.z, -maxGroundRadius, maxGroundRadius);
+
+                    if (isSprint && actions.run) {
+                        switchAnimation('run');
+                        actions.run.timeScale = 1.25;
+                    } else {
+                        switchAnimation('walk');
+                        if (actions.walk) actions.walk.timeScale = 1.15;
+                    }
+                } else {
+                    smoothedSpeed = 0;
+                    switchAnimation('idle');
+                }
+            } else {
+                switchAnimation('idle');
+            }
+
+            const surfaceY = getSurfaceHeight(bearContainer.position.x, bearContainer.position.z);
+            const currentGroundY = Math.max(surfaceY, WATER_Y - 0.75);
+            bearContainer.position.y = THREE.MathUtils.lerp(bearContainer.position.y, currentGroundY, 12.0 * delta);
+
+            // Оновлення позицій паличок трави тільки при переміщенні ведмедя
+            updateGrassField(bearContainer.position.x, bearContainer.position.z);
+
+            // ДНІ 7-9: МІСТО
+            if (gameStage === 4) {
+                const distToCity = Math.hypot(bearContainer.position.x - CITY_X, bearContainer.position.z - CITY_Z);
+                if (distToCity <= 160.0) enableCity();
+
+                const progress = THREE.MathUtils.clamp(1.0 - (distToCity / 460.0), 0.0, 1.0);
+                const cycleProgress = progress * 3.0;
+                const currentDayIndex = Math.min(2, Math.floor(cycleProgress));
+                currentDayDisplay = `День ${7 + currentDayIndex} / 10`;
+
+                const dayFraction = cycleProgress - Math.floor(cycleProgress);
+
+                if (distToCity < 45.0) {
+                    targetHour = 23.8;
+                } else {
+                    if (dayFraction < 0.45) targetHour = 12.0;
+                    else if (dayFraction < 0.68) targetHour = 17.9;
+                    else targetHour = 23.8;
+                }
+
+                if (!isCitySleepStage) {
+                    if (currentDayIndex === 0) {
+                        huntSubtitleEl.innerText = "День 7. Ведмідь вирушив у довгу дорогу до далекого міста...";
+                    } else if (currentDayIndex === 1) {
+                        huntSubtitleEl.innerText = "День 8. Друга доба в дорозі... Сонце сходить і знову згасає, сили тануть.";
+                    } else {
+                        if (distToCity > 50.0) {
+                            huntSubtitleEl.innerText = "День 9. Настає вечір... Попереду вже сяють теплі вікна та ліхтарі міста.";
+                        } else {
+                            huntSubtitleEl.innerText = "Ніч огорнула місто. Знесилений ведмідь дістався стенду з друзями...";
+                        }
+                    }
+                }
+            }
+
+            if (isNightSleepingStage && gameStage < 4 && !warningSubtitleTimer) {
+                const rCenter = getRiverCenter(bearContainer.position.x);
+                const distToWaterEdge = Math.max(0, Math.abs(bearContainer.position.z - rCenter) - RIVER_WIDTH);
+
+                if (distToWaterEdge < 15.0) {
+                    const rem = Math.ceil(15.0 - distToWaterEdge);
+                    huntSubtitleEl.innerText = `Знову невдача! Відійдіть від води на сушу (ще ${rem} м), щоб заснути.`;
+                } else {
+                    huntSubtitleEl.innerText = "Ви на безпечній суші. Знову невдача, пора спати... [Натисніть T]";
+                }
+            }
+
+            updateAnimals(delta, bearContainer.position.x, bearContainer.position.z);
+            updateInfiniteForest(bearContainer.position.x, bearContainer.position.z, delta);
+
+            sunLight.position.set(
+                bearContainer.position.x + skyUniforms.uSunPos.value.x * 50,
+                Math.max(bearContainer.position.y + skyUniforms.uSunPos.value.y * 45, 12),
+                bearContainer.position.z + skyUniforms.uSunPos.value.z * 50
+            );
+            sunLight.target.position.set(bearContainer.position.x, bearContainer.position.y, bearContainer.position.z);
+            sunLight.target.updateMatrixWorld();
+
+            const camTargetPos = new THREE.Vector3(bearContainer.position.x, bearContainer.position.y + 0.9, bearContainer.position.z);
+            const prevTarget = controls.target.clone();
+            controls.target.lerp(camTargetPos, 0.08);
+
+            const offsetDiff = controls.target.clone().sub(prevTarget);
+            camera.position.add(offsetDiff);
+
+            currentDistance = THREE.MathUtils.lerp(currentDistance, targetDistance, 0.07);
+            const camDirection = camera.position.clone().sub(controls.target).normalize();
+
+            if (isCameraRotatingToWp) {
+                const curAngle = Math.atan2(camDirection.x, camDirection.z);
+                let diff = (targetCamHorizontalAngle - curAngle) % (Math.PI * 2);
+                if (diff < -Math.PI) diff += Math.PI * 2;
+                if (diff > Math.PI) diff -= Math.PI * 2;
+
+                if (Math.abs(diff) < 0.015) {
+                    isCameraRotatingToWp = false;
+                } else {
+                    const newAngle = curAngle + diff * Math.min(1.0, 3.2 * delta);
+                    const horizLen = Math.hypot(camDirection.x, camDirection.z) || 1.0;
+                    camDirection.x = Math.sin(newAngle) * horizLen;
+                    camDirection.z = Math.cos(newAngle) * horizLen;
+                    camDirection.normalize();
+                }
+            }
+
+            camera.position.copy(controls.target).addScaledVector(camDirection, currentDistance);
+
+            controls.update();
+            updateWaypointsOnScreen(elapsedTime);
+
+            composer.render();
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+Model Information:
+* title:	River Rocks Scan
+* source:	https://sketchfab.com/3d-models/river-rocks-scan-34276999dfa64f439de965d76f756356
+* author:	CommonSpence (https://sketchfab.com/commonspence)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "River Rocks Scan" (https://sketchfab.com/3d-models/river-rocks-scan-34276999dfa64f439de965d76f756356) by CommonSpence (https://sketchfab.com/commonspence) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
