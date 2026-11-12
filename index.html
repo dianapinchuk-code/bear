@@ -70,68 +70,182 @@
         }
 
         .waypoint-marker {
-            position: absolute;
-            transform: translate(-50%, -50%);
+            position: fixed;
+            top: 0;
+            left: 0;
             display: none;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             pointer-events: none;
-            z-index: 5;
-            transition: opacity 0.15s ease-out;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.8));
+            will-change: transform, left, top;
         }
+
         .waypoint-ring {
-            width: 22px;
-            height: 22px;
-            border: 3px solid #ffffff;
+            width: 26px;
+            height: 26px;
+            border: 2.5px solid #ffffff;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.35);
-            box-shadow: 0 0 14px #ffffff, 0 0 24px rgba(255, 255, 255, 0.8);
-            animation: pulseWaypointWhite 1.8s infinite ease-in-out;
+            background: rgba(84, 243, 153, 0.25);
+            box-shadow: 0 0 10px #54f399, inset 0 0 6px #54f399;
+            animation: pulseWaypoint 1.6s infinite ease-in-out;
+            position: relative;
         }
+
+        /* Маленька центральна цятка для точності */
+        .waypoint-ring::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            background: #ffffff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
         .waypoint-label {
-            margin-top: 4px;
+            margin-top: 6px;
             color: #ffffff;
+            font-family: inherit;
             font-weight: 700;
-            font-size: 13.5px;
+            font-size: 12px;
             letter-spacing: 0.5px;
-            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.95);
-            background: rgba(0, 0, 0, 0.45);
-            padding: 1px 7px;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(14, 25, 20, 0.85);
+            border: 1px solid rgba(84, 243, 153, 0.5);
+            padding: 2px 8px;
+            border-radius: 12px;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
         }
 
-        @keyframes pulseWaypointWhite {
-            0% { transform: scale(0.9); box-shadow: 0 0 8px #ffffff; }
-            50% { transform: scale(1.15); box-shadow: 0 0 20px #ffffff; }
-            100% { transform: scale(0.9); box-shadow: 0 0 8px #ffffff; }
+        @keyframes pulseWaypoint {
+            0% {
+                transform: scale(0.9);
+                box-shadow: 0 0 6px #54f399, inset 0 0 4px #54f399;
+            }
+            50% {
+                transform: scale(1.15);
+                box-shadow: 0 0 16px #54f399, inset 0 0 8px #54f399;
+            }
+            100% {
+                transform: scale(0.9);
+                box-shadow: 0 0 6px #54f399, inset 0 0 4px #54f399;
+            }
         }
-
-        #screen-fade {
+        #sleep-image-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.92); /* м'який темний фон */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 60;
+            transition: opacity 1.2s ease-in-out; /* плавна поява та зникнення */
+        }
+        #sleep-image-overlay.active {
+            opacity: 1;
+        }
+        .sleep-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #sleep-img {
+            /* РІВНО НА ПІВ ЕКРАНУ І БЕЗ РОЗТЯГУВАННЯ */
+            width: 50vw;
+            max-height: 50vh;
+            object-fit: contain; /* зберігає оригінальні пропорції фото */
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9), 0 0 2px rgba(255, 255, 255, 0.25);
+        }
+        #sleep-caption {
+            margin-top: 16px;
+            color: #f0f5f2;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-align: center;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+        }
+         #intro-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
             background: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            transition: opacity 0.8s ease-in-out;
+        }
+        #intro-overlay.hidden {
             opacity: 0;
             pointer-events: none;
-            z-index: 30;
-            transition: opacity 0.8s ease;
         }
-        #screen-fade.flash-fail {
-            animation: failAnim 1.4s ease-in-out forwards;
-        }
-        #screen-fade.sleep-black {
-            opacity: 1 !important;
+
+        /* Фінальний екран (finall.jpg) */
+        #final-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 300;
             transition: opacity 1.2s ease-in-out;
         }
-        @keyframes failAnim {
-            0% { opacity: 0; }
-            35% { opacity: 0.72; }
-            70% { opacity: 0.65; }
-            100% { opacity: 0; }
+        #final-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
         }
+
+        .screen-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .screen-card img {
+            width: 50vw;
+            max-height: 50vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9), 0 0 2px rgba(255, 255, 255, 0.25);
+        }
+        .screen-card .caption {
+            margin-top: 18px;
+            color: #f0f5f2;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            text-align: center;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+        }
+        .space-prompt {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #54f399;
+            letter-spacing: 0.5px;
+        }
+
     </style>
 
     <script type="importmap">
@@ -144,19 +258,30 @@
     </script>
 </head>
 <body>
-    <div id="hud">
-        <b>ПРОЦЕДУРНИЙ ЛІС ТА ПОДОРОЖ:</b><br>
-        <span class="key">W</span> / <span class="key">S</span> — Вперед / Назад<br>
-        <span class="key">A</span> / <span class="key">D</span> — Поворот<br>
-        <span class="key">Shift</span> — <b>Прискорений біг</b><br>
-        <span class="key">T</span> — <b>Відпочити / Спати</b><br>
-        <span class="key">N</span> — <b>Прискорити зміну доби</b><br>
-        <small style="color: #92bfa9;">Коліщатко — інерційний зум</small>
-        <div id="time-panel">
-            📅 <b id="day-val">День 1 / 10</b> | <span id="phase-val" style="color: #ffde59;">День</span>
+    <div id="intro-overlay">
+        <div class="screen-card">
+            <img id="intro-img" src="1.jpg" alt="Історія ведмедя">
+            <div id="intro-caption" class="caption">Колись це був звичайний ліс. Місце, де панували тиша й спокій, 
+                де дерева шелестіли від вітру, струмки наповнювалися чистою водою, 
+                а тварини жили своїм звичним життям. Вони полювали, шукали їжу, 
+                облаштовували домівки та ростили дитинчат. Серед них був і бурий ведмідь — сильний, 
+                вільний господар лісу, який знав кожну стежку, кожен звук і кожен куточок свого дому.
+Але одного дня все змінилося.</div>
+            <div class="space-prompt">[ Натисніть Пробіл (Space), щоб продовжити ]</div>
         </div>
     </div>
-
+    <div id="final-overlay">
+        <div class="screen-card">
+            <img src="finall.jpg" alt="Його ліс залишився лише у спогадах.">
+            <div class="caption">Фінал</div>
+        </div>
+    </div>
+   <div id="sleep-image-overlay">
+        <div class="sleep-card">
+            <img id="sleep-img" src="sleep.jpg" alt="Ведмідь спить">
+            <div id="sleep-caption">День 1 завершився. Ведмідь засинає...</div>
+        </div>
+    </div>
     <div id="hunt-subtitle">Звуки звірів, треба вполювати...</div>
     <div id="screen-fade"></div>
 
@@ -166,6 +291,7 @@
     </div>
 
     <script type="module">
+        
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -176,11 +302,18 @@
 
         const loader = new GLTFLoader();
         const textureLoader = new THREE.TextureLoader();
+let introStep = 1; // 1 = 1.jpg, 2 = 2.jpg, 3 = гра
+        let enclosureStayTimer = 10.0;
+        let isFinalTriggered = false;
 
+        const introOverlayEl = document.getElementById('intro-overlay');
+        const introImgEl = document.getElementById('intro-img');
+        const introCaptionEl = document.getElementById('intro-caption');
+        const finalOverlayEl = document.getElementById('final-overlay');
         // 1. СЦЕНА ТА АТМОСФЕРА
         const scene = new THREE.Scene();
-        const baseMistColor = new THREE.Color(0x1c3029);
-        scene.fog = new THREE.Fog(baseMistColor, 28, 105);
+       const baseMistColor = new THREE.Color(0x8a9194);
+scene.fog = new THREE.Fog(baseMistColor, 6, 20);
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1600);
         camera.position.set(0, 2.8, 7.5);
@@ -363,8 +496,9 @@
         let currentHour = 12.5;
         let targetHour = 12.5;
         let isDay10CityWandering = false;
-
-
+        let day10Timer = 60.0;
+        let isInEnclosure = false;
+        const ENCLOSURE_POS = new THREE.Vector3(260.0, 0, 490.0);
         const dayValEl = document.getElementById('day-val');
         const phaseValEl = document.getElementById('phase-val');
 
@@ -386,25 +520,37 @@
             skyUniforms.uDayFactor.value = dayFactor;
             skyUniforms.uSunsetFactor.value = sunsetFactor;
 
-            const dayFog = new THREE.Color(0x1c3029);
-            const sunsetFog = new THREE.Color(0x562315);
-            const nightFog = new THREE.Color(0x060f12);
-            const curFog = nightFog.clone().lerp(dayFog, dayFactor).lerp(sunsetFog, sunsetFactor * 0.85);
+            // 1. СІРИЙ ТУМАН ДЛЯ КОЖНОЇ ПОРИ ДОБИ
+            const dayFog    = new THREE.Color(0xa0a8ad); // Світлий попелясто-сірий туман вдень
+            const sunsetFog = new THREE.Color(0x6e5854); // Теплий димчасто-сірий на заході
+            const nightFog  = new THREE.Color(0x181c20); // Глибокий темно-сірий вночі
+
+            const curFog = nightFog.clone()
+                .lerp(dayFog, dayFactor)
+                .lerp(sunsetFog, sunsetFactor * 0.75);
             scene.fog.color.copy(curFog);
 
+            // 2. ЧІТКЕ СВІТЛО ТА ВИРАЗНІ ТІНІ
             if (sunY > -0.05) {
-                sunLight.intensity = THREE.MathUtils.lerp(0.5, 2.3, dayFactor);
-                sunLight.color.setRGB(1.0, 0.95 - sunsetFactor * 0.48, 0.85 - sunsetFactor * 0.68);
-                ambientLight.intensity = THREE.MathUtils.lerp(0.12, 0.65, dayFactor);
-                ambientLight.color.setRGB(1.0, 0.95 - sunsetFactor * 0.35, 0.90 - sunsetFactor * 0.45);
-                hemiLight.intensity = THREE.MathUtils.lerp(0.16, 0.80, dayFactor);
+                // Вдень і на заході: потужне спрямоване світло для різких тіней
+                sunLight.intensity = THREE.MathUtils.lerp(0.8, 3.2, dayFactor);
+                sunLight.color.setRGB(1.0, 0.95 - sunsetFactor * 0.35, 0.85 - sunsetFactor * 0.55);
+
+                // Приглушене фонове світло, щоб тіні не розмивалися і були глибокими
+                ambientLight.intensity = THREE.MathUtils.lerp(0.08, 0.35, dayFactor);
+                ambientLight.color.setRGB(0.85, 0.90, 0.95);
+                hemiLight.intensity = THREE.MathUtils.lerp(0.10, 0.40, dayFactor);
             } else {
-                sunLight.intensity = 0.35;
-                sunLight.color.setRGB(0.55, 0.72, 1.0);
-                ambientLight.intensity = 0.16;
-                hemiLight.intensity = 0.20;
+                // Вночі: холодне контрастне місячне світло з помітними тінями
+                sunLight.intensity = 0.60;
+                sunLight.color.setRGB(0.45, 0.60, 0.85);
+
+                ambientLight.intensity = 0.06;
+                ambientLight.color.setRGB(0.25, 0.30, 0.40);
+                hemiLight.intensity = 0.08;
             }
 
+            // 3. ПАНЕЛЬ ЧАСУ В HUD
             if (dayValEl) dayValEl.innerText = currentDayDisplay;
             if (phaseValEl) {
                 if (currentHour >= 5.0 && currentHour < 8.5) {
@@ -422,7 +568,6 @@
                 }
             }
         }
-
         // 7. РЕЛЬЄФ
         const RIVER_Z = 72.0;
         const RIVER_WIDTH = 13.0;
@@ -461,6 +606,13 @@
             if (Math.abs(relX) < 14.0 && relZ > -95.0 && relZ < 65.0) {
                 const roadBlend = THREE.MathUtils.smoothstep(Math.abs(relX), 8.0, 14.0);
                 height = THREE.MathUtils.lerp(0.0, height, roadBlend);
+            }
+
+            // --- ОСЬ ЦЕЙ НОВИЙ БЛОК ВСТАВЛЯЄТЬСЯ СЮДИ: ---
+            const distToEnclosure = Math.hypot(x - ENCLOSURE_POS.x, z - ENCLOSURE_POS.z);
+            if (distToEnclosure < 18.0) {
+                const encBlend = THREE.MathUtils.smoothstep(distToEnclosure, 9.5, 18.0);
+                height = THREE.MathUtils.lerp(0.0, height, encBlend);
             }
 
             return height;
@@ -878,28 +1030,24 @@
             fishList.push({ mesh: fishMesh, jumping: false });
         }
 
-        // 8.3 МІСТО ТА СТЕНД
+        // 8.3 ЗАТИШНЕ МІСТО, СТЕНД ТА ВОЛЬЄР
+        // =======================================================
+        // Розташування заповідника далеко за містом
+        // Універсальний завантажувач для папок (пробує .gltf, потім .glb)
         function createWindowTexture() {
             const canvas = document.createElement('canvas');
             canvas.width = 512; canvas.height = 512;
             const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#14161b'; ctx.fillRect(0, 0, 512, 512);
-
-            const cols = 6, rows = 5, w = 48, h = 42, gapX = 36, gapY = 46;
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    const x = 20 + c * (w + gapX);
-                    const y = 20 + r * (h + gapY);
-                    if (Math.random() < 0.65) {
-                        const roll = Math.random();
-                        if (roll < 0.7) ctx.fillStyle = 'rgba(255, 218, 125, 1.0)';
-                        else if (roll < 0.9) ctx.fillStyle = 'rgba(255, 165, 85, 1.0)';
-                        else ctx.fillStyle = 'rgba(165, 235, 255, 1.0)';
-                        ctx.fillRect(x, y, w, h);
-                    } else {
-                        ctx.fillStyle = '#22262e';
-                        ctx.fillRect(x, y, w, h);
-                    }
+            ctx.fillStyle = '#1c1f26'; ctx.fillRect(0, 0, 512, 512);
+            for (let r = 0; r < 6; r++) {
+                for (let c = 0; c < 5; c++) {
+                    const x = 20 + c * 100;
+                    const y = 20 + r * 82;
+                    const isLit = Math.random() < 0.72;
+                    ctx.fillStyle = isLit ? 'rgba(255, 222, 138, 0.95)' : '#2b2f38';
+                    ctx.fillRect(x, y, 62, 50);
+                    ctx.strokeStyle = '#121418'; ctx.lineWidth = 4;
+                    ctx.strokeRect(x, y, 62, 50);
                 }
             }
             const tex = new THREE.CanvasTexture(canvas);
@@ -908,296 +1056,577 @@
         }
 
         const cityWindowTexture = createWindowTexture();
-        const cityBuildingMaterial = new THREE.MeshStandardMaterial({
-            map: cityWindowTexture,
-            emissive: 0xffffff,
-            emissiveMap: cityWindowTexture,
-            emissiveIntensity: 1.25,
-            roughness: 0.65,
-            metalness: 0.15
-        });
-
         const cityDistrictGroup = new THREE.Group();
         cityDistrictGroup.position.set(CITY_X, 0, CITY_Z);
         cityDistrictGroup.visible = false;
         scene.add(cityDistrictGroup);
 
-        const buildingConfigs = [
-            { x: -32, z: -25, w: 20, d: 24, h: 14.5 },
-            { x: 32,  z: -25, w: 22, d: 24, h: 16.0 },
-            { x: -35, z: 20,  w: 22, d: 26, h: 13.0 },
-            { x: 35,  z: 20,  w: 24, d: 26, h: 15.0 },
-            { x: -58, z: -2,  w: 18, d: 45, h: 16.5 },
-            { x: 58,  z: -2,  w: 18, d: 45, h: 17.0 },
-            { x: 0,   z: 55,  w: 48, d: 20, h: 15.5 },
-            { x: -28, z: 65,  w: 26, d: 20, h: 12.0 },
-            { x: 28,  z: 65,  w: 26, d: 20, h: 13.5 }
+        const cityLights = [];
+        const cityObstacles = [];
+
+        // 1. МАТЕРІАЛИ ДОРОГИ ТА ТРОТУАРІВ
+        const roadAsphaltMat = new THREE.MeshStandardMaterial({ color: 0x24262b, roughness: 0.92 });
+        const sidewalkMat   = new THREE.MeshStandardMaterial({ color: 0x9fa3ab, roughness: 0.82 });
+        const roadLineMat   = new THREE.MeshBasicMaterial({ color: 0xeeeeee });
+
+        // Функція створення сегмента вулиці (асфальт + 2 тротуари + пунктирна розмітка)
+        function createFullStreet(x, z, width, length, isHorizontal = false) {
+            const streetGrp = new THREE.Group();
+            streetGrp.position.set(x, 0, z);
+            if (isHorizontal) streetGrp.rotation.y = Math.PI / 2;
+
+            // Проїжджа частина
+            const road = new THREE.Mesh(new THREE.PlaneGeometry(width, length).rotateX(-Math.PI / 2), roadAsphaltMat);
+            road.position.y = 0.05;
+            road.receiveShadow = true;
+            streetGrp.add(road);
+
+            // Розділювальна пунктирна лінія
+            const lineSpacing = 7.0;
+            const lineCount = Math.floor(length / lineSpacing);
+            const startZ = -((lineCount - 1) * lineSpacing) / 2;
+            for (let i = 0; i < lineCount; i++) {
+                const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 3.8).rotateX(-Math.PI / 2), roadLineMat);
+                dash.position.set(0, 0.06, startZ + i * lineSpacing);
+                streetGrp.add(dash);
+            }
+
+            // Тротуар ліворуч
+            const walkL = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.22, length), sidewalkMat);
+            walkL.position.set(-width / 2 - 1.75, 0.11, 0);
+            walkL.receiveShadow = true;
+            streetGrp.add(walkL);
+
+            // Тротуар праворуч
+            const walkR = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.22, length), sidewalkMat);
+            walkR.position.set(width / 2 + 1.75, 0.11, 0);
+            walkR.receiveShadow = true;
+            streetGrp.add(walkR);
+
+            cityDistrictGroup.add(streetGrp);
+        }
+
+        // ==============================================================
+        // 10 ВУЛИЦЬ У ВСІ БОКИ:
+        // ==============================================================
+        // 1. Північний проспект (вхід з лісу до площі)
+        createFullStreet(0, -75, 13, 90, false);
+
+        // 2. Південний проспект (вихід на південь)
+        createFullStreet(0, 75, 13, 90, false);
+
+        // 3. Західна головна вулиця (від площі на захід)
+        createFullStreet(-75, 0, 13, 90, true);
+
+        // 4. Східна головна вулиця (від площі на схід)
+        createFullStreet(75, 0, 13, 90, true);
+
+        // 5. Північна паралельна вулиця 1
+        createFullStreet(0, -45, 11, 160, true);
+
+        // 6. Північна паралельна вулиця 2
+        createFullStreet(0, -95, 11, 140, true);
+
+        // 7. Південна паралельна вулиця
+        createFullStreet(0, 50, 11, 160, true);
+
+        // 8. Західний бульвар (з'єднує вулиці на заході)
+        createFullStreet(-55, 0, 11, 150, false);
+
+        // 9. Східний бульвар (з'єднує вулиці на сході)
+        createFullStreet(55, 0, 11, 150, false);
+
+        // 10. Центральна кільцева площа навколо постаменту
+        const centerPlaza = new THREE.Mesh(
+            new THREE.CylinderGeometry(26, 26, 0.08, 48),
+            new THREE.MeshStandardMaterial({ color: 0x5a5d66, roughness: 0.85 })
+        );
+        centerPlaza.position.set(0, 0.04, 0);
+        centerPlaza.receiveShadow = true;
+        cityDistrictGroup.add(centerPlaza);
+
+        // Пішохідні переходи («зебри») на 4-х входах до площі
+        function createZebra(x, z, isH = false) {
+            const zGrp = new THREE.Group();
+            zGrp.position.set(x, 0.07, z);
+            if (isH) zGrp.rotation.y = Math.PI / 2;
+            for (let i = -5.0; i <= 5.0; i += 1.35) {
+                const stripe = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 3.2).rotateX(-Math.PI / 2), roadLineMat);
+                stripe.position.set(i, 0, 0);
+                zGrp.add(stripe);
+            }
+            cityDistrictGroup.add(zGrp);
+        }
+        createZebra(0, -28);
+        createZebra(0, 28);
+        createZebra(-28, 0, true);
+        createZebra(28, 0, true);
+
+        // 2. БУДИНКИ У КВАРТАЛАХ МІЖ ВУЛИЦЯМИ
+        const buildingColors = [
+            0xb85d3b, 0xd4b88a, 0x5a7566, 0xa36c4b, 0x667788, 0xb87f61,
+            0x4b6357, 0x9e5246, 0xc2a678, 0x5f697a, 0x8a5d43, 0x73806b
         ];
 
-        buildingConfigs.forEach(b => {
-            const bGeo = new THREE.BoxGeometry(b.w, b.h, b.d);
-            const bMesh = new THREE.Mesh(bGeo, cityBuildingMaterial);
-            bMesh.position.set(b.x, b.h / 2, b.z);
-            bMesh.castShadow = true; bMesh.receiveShadow = true;
-            cityDistrictGroup.add(bMesh);
+        const cityQuartersBuildings = [
+            // Північно-західний сектор
+            { x: -28, z: -70, w: 18, d: 20, h: 22, col: buildingColors[0] },
+            { x: -28, z: -25, w: 18, d: 18, h: 18, col: buildingColors[1] },
+            { x: -80, z: -70, w: 20, d: 22, h: 20, col: buildingColors[2] },
+
+            // Північно-східний сектор
+            { x: 28,  z: -70, w: 18, d: 20, h: 24, col: buildingColors[3] },
+            { x: 28,  z: -25, w: 18, d: 18, h: 19, col: buildingColors[4] },
+            { x: 80,  z: -70, w: 20, d: 22, h: 21, col: buildingColors[5] },
+
+            // Південно-західний сектор
+            { x: -28, z: 25,  w: 18, d: 18, h: 17, col: buildingColors[6] },
+            { x: -28, z: 75,  w: 18, d: 22, h: 23, col: buildingColors[7] },
+            { x: -80, z: 45,  w: 22, d: 24, h: 19, col: buildingColors[8] },
+
+            // Південно-східний сектор
+            { x: 28,  z: 25,  w: 18, d: 18, h: 21, col: buildingColors[9] },
+            { x: 28,  z: 75,  w: 18, d: 22, h: 18, col: buildingColors[10] },
+            { x: 80,  z: 45,  w: 22, d: 24, h: 25, col: buildingColors[11] }
+        ];
+
+        cityQuartersBuildings.forEach(b => {
+            const bGrp = new THREE.Group();
+            bGrp.position.set(b.x, 0, b.z);
+
+            const wallMat = new THREE.MeshStandardMaterial({
+                color: b.col,
+                map: cityWindowTexture,
+                emissive: 0xffda82,
+                emissiveMap: cityWindowTexture,
+                emissiveIntensity: 0.5,
+                roughness: 0.75,
+                metalness: 0.08
+            });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), wallMat);
+            body.position.y = b.h / 2;
+            body.castShadow = true;
+            body.receiveShadow = true;
+            bGrp.add(body);
+
+            // Карниз та парапет даху
+            const roof = new THREE.Mesh(
+                new THREE.BoxGeometry(b.w + 0.6, 0.7, b.d + 0.6),
+                new THREE.MeshStandardMaterial({ color: 0x252422, roughness: 0.9 })
+            );
+            roof.position.y = b.h + 0.35;
+            bGrp.add(roof);
+
+            cityDistrictGroup.add(bGrp);
+
+            cityObstacles.push({
+                x: CITY_X + b.x,
+                z: CITY_Z + b.z,
+                r: Math.max(b.w, b.d) * 0.52
+            });
         });
 
-        const plazaGeo = new THREE.PlaneGeometry(75, 75);
-        plazaGeo.rotateX(-Math.PI / 2);
-        const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: 0.92 });
-        const plazaMesh = new THREE.Mesh(plazaGeo, asphaltMat);
-        plazaMesh.position.set(0, 0.05, 12);
-        plazaMesh.receiveShadow = true;
-        cityDistrictGroup.add(plazaMesh);
-
-        const approachRoadGeo = new THREE.PlaneGeometry(15, 65);
-        approachRoadGeo.rotateX(-Math.PI / 2);
-        const approachRoadMesh = new THREE.Mesh(approachRoadGeo, asphaltMat);
-        approachRoadMesh.position.set(0, 0.06, -55);
-        approachRoadMesh.receiveShadow = true;
-        cityDistrictGroup.add(approachRoadMesh);
-
-        const cityObstacles = [
-            { x: CITY_X - 5.5, z: CITY_Z - 38, r: 2.1 },
-            { x: CITY_X + 5.5, z: CITY_Z - 62, r: 2.1 },
-            { x: CITY_X - 18,  z: CITY_Z + 2,  r: 2.2 },
-            { x: CITY_X + 20,  z: CITY_Z - 10, r: 2.2 },
-            { x: CITY_X - 8.2, z: CITY_Z - 20, r: 1.2 },
-            { x: CITY_X + 8.2, z: CITY_Z - 48, r: 1.2 }
-        ];
-
-        function createCar(colorHex, x, z, rotY = 0) {
+        // 3. АВТОМОБІЛІ НА РІЗНИХ ВУЛИЦЯХ
+        function createCityCar(colorHex, isSuv = false) {
             const car = new THREE.Group();
-            car.position.set(x, 0, z); car.rotation.y = rotY;
-            const bodyMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.35, metalness: 0.35 });
-            const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.75, 4.3), bodyMat);
-            chassis.position.y = 0.55; chassis.castShadow = true; car.add(chassis);
-            const glassMat = new THREE.MeshStandardMaterial({ color: 0x1f242b, roughness: 0.2, metalness: 0.85 });
-            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.75, 2.3), glassMat);
-            cabin.position.set(0, 1.2, -0.2); cabin.castShadow = true; car.add(cabin);
+            const w = 2.1, l = isSuv ? 4.7 : 4.3, h = isSuv ? 1.0 : 0.75;
 
-            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.9 });
-            const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.35, 12);
-            wheelGeo.rotateZ(Math.PI / 2);
-            [
-                { x: -1.05, z: 1.3 }, { x: 1.05, z: 1.3 },
-                { x: -1.05, z: -1.3 }, { x: 1.05, z: -1.3 }
-            ].forEach(wPos => {
-                const w = new THREE.Mesh(wheelGeo, wheelMat);
-                w.position.set(wPos.x, 0.38, wPos.z);
-                w.castShadow = true; car.add(w);
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(w, h, l),
+                new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.35, metalness: 0.65 })
+            );
+            body.position.y = 0.55;
+            body.castShadow = true;
+            car.add(body);
+
+            const cabin = new THREE.Mesh(
+                new THREE.BoxGeometry(w * 0.88, isSuv ? 0.95 : 0.72, l * 0.52),
+                new THREE.MeshStandardMaterial({ color: 0x14181f, roughness: 0.1, metalness: 0.9 })
+            );
+            cabin.position.set(0, 0.55 + h / 2 + (isSuv ? 0.45 : 0.35), -0.2);
+            cabin.castShadow = true;
+            car.add(cabin);
+
+            // Колеса
+            const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.32, 12).rotateZ(Math.PI / 2);
+            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.9 });
+            [[-w/2 - 0.05, l * 0.3], [w/2 + 0.05, l * 0.3], [-w/2 - 0.05, -l * 0.3], [w/2 + 0.05, -l * 0.3]].forEach(([wx, wz]) => {
+                const tire = new THREE.Mesh(wheelGeo, wheelMat);
+                tire.position.set(wx, 0.38, wz);
+                tire.castShadow = true;
+                car.add(tire);
             });
 
-            const hlMat = new THREE.MeshBasicMaterial({ color: 0xfffae0 });
-            const hl1 = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.1), hlMat);
-            hl1.position.set(-0.65, 0.65, 2.15);
-            const hl2 = hl1.clone(); hl2.position.x = 0.65;
-            car.add(hl1); car.add(hl2);
             return car;
         }
 
-        cityDistrictGroup.add(createCar(0x224888, -5.5, -38, 0));
-        cityDistrictGroup.add(createCar(0x882424, 5.5, -62, Math.PI));
-        cityDistrictGroup.add(createCar(0xd49f24, -18, 2, 1.2));
-        cityDistrictGroup.add(createCar(0x354d38, 20, -10, -0.8));
+        const cityCarsList = [
+            { col: 0x1d4d85, suv: false, x: -5.5, z: -60, rot: 0 },
+            { col: 0x942222, suv: true,  x: 5.5,  z: -35, rot: Math.PI },
+            { col: 0xd98218, suv: false, x: -5.5, z: 45,  rot: 0 },
+            { col: 0x2b593a, suv: true,  x: 5.5,  z: 70,  rot: Math.PI },
+            { col: 0x3d414a, suv: false, x: -50,  z: -5.5, rot: Math.PI / 2 },
+            { col: 0xe6e6e6, suv: false, x: 50,   z: 5.5,  rot: -Math.PI / 2 }
+        ];
 
-        function createDumpster(x, z, rot = 0) {
-            const dGrp = new THREE.Group();
-            dGrp.position.set(x, 0, z); dGrp.rotation.y = rot;
-            const boxMat = new THREE.MeshStandardMaterial({ color: 0x2d4432, roughness: 0.75 });
-            const box = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 2.4), boxMat);
-            box.position.y = 0.65; box.castShadow = true; dGrp.add(box);
-            const lidMat = new THREE.MeshStandardMaterial({ color: 0x1f2620, roughness: 0.8 });
-            const lid = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.15, 2.5), lidMat);
-            lid.position.y = 1.3; dGrp.add(lid);
-            return dGrp;
-        }
+        cityCarsList.forEach(c => {
+            const car = createCityCar(c.col, c.suv);
+            car.position.set(c.x, 0, c.z);
+            car.rotation.y = c.rot;
+            cityDistrictGroup.add(car);
+            cityObstacles.push({ x: CITY_X + c.x, z: CITY_Z + c.z, r: 2.2 });
+        });
 
-        function createTrashCan(x, z) {
-            const bin = new THREE.Group();
-            bin.position.set(x, 0, z);
-            const canMat = new THREE.MeshStandardMaterial({ color: 0x333b45, roughness: 0.7 });
-            const can = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.28, 0.9, 12), canMat);
-            can.position.y = 0.45; can.castShadow = true; bin.add(can);
-            return bin;
-        }
-
-        cityDistrictGroup.add(createDumpster(-8.2, -20, 0.2));
-        cityDistrictGroup.add(createDumpster(8.2, -48, -0.3));
-        cityDistrictGroup.add(createTrashCan(-14.5, -17));
-        cityDistrictGroup.add(createTrashCan(14.5, -17));
-        cityDistrictGroup.add(createTrashCan(-14.5, 13));
-        cityDistrictGroup.add(createTrashCan(14.5, 13));
-
-        const cityLights = [];
-        function createStreetLamp(x, z) {
+        // 4. ВУЛИЧНІ ЛІХТАРІ ТА ОСВІТЛЕННЯ
+        function addCityLamp(x, z) {
             const post = new THREE.Group();
             post.position.set(x, 0, z);
+
             const pole = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.12, 0.16, 5.2, 8),
-                new THREE.MeshStandardMaterial({ color: 0x22262a, metalness: 0.8, roughness: 0.3 })
+                new THREE.MeshStandardMaterial({ color: 0x1f2326, metalness: 0.85 })
             );
-            pole.position.y = 2.6; pole.castShadow = true; post.add(pole);
+            pole.position.y = 2.6;
+            pole.castShadow = true;
+            post.add(pole);
 
-            const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffea90 }));
-            bulb.position.y = 5.2; post.add(bulb);
+            const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffea9f }));
+            bulb.position.y = 5.1;
+            post.add(bulb);
 
-            const lampLight = new THREE.PointLight(0xffdf88, 0, 26);
-            lampLight.position.y = 5.0; 
-            lampLight.castShadow = false; 
-            post.add(lampLight);
-            cityLights.push(lampLight);
-            return post;
+            const light = new THREE.PointLight(0xffbe5c, 0, 26);
+            light.position.y = 4.8;
+            post.add(light);
+            cityLights.push(light);
+
+            cityDistrictGroup.add(post);
+            cityObstacles.push({ x: CITY_X + x, z: CITY_Z + z, r: 0.6 });
         }
 
-        const lampPositions = [
-            { x: -14, z: -18 }, { x: 14, z: -18 },
-            { x: -14, z: 12 },  { x: 14, z: 12 },
-            { x: -14, z: 38 },  { x: 14, z: 38 }
-        ];
-        lampPositions.forEach(lp => cityDistrictGroup.add(createStreetLamp(lp.x, lp.z)));
+        // Ліхтарі на ключових перехрестях
+        [
+            [-8, -55], [8, -55], [-8, 55], [8, 55],
+            [-45, -8], [-45, 8], [45, -8], [45, 8],
+            [-18, -18], [18, -18], [-18, 18], [18, 18]
+        ].forEach(([lx, lz]) => addCityLamp(lx, lz));
 
+        // 5. ГРАНДІОЗНИЙ СТЕНД: РОДИНА З 3-Х ВЕДМЕДІВ У ЦЕНТРІ ПЛОЩІ
         const standGroup = new THREE.Group();
         standGroup.position.set(0, 0, 0);
         cityDistrictGroup.add(standGroup);
 
-        const basePodium = new THREE.Mesh(
-            new THREE.CylinderGeometry(6.6, 7.2, 0.45, 36),
-            new THREE.MeshStandardMaterial({ color: 0x2e3238, roughness: 0.85 })
+        const podiumBottom = new THREE.Mesh(
+            new THREE.CylinderGeometry(7.2, 7.6, 0.35, 40),
+            new THREE.MeshStandardMaterial({ color: 0x3d414a, roughness: 0.8 })
         );
-        basePodium.position.y = 0.225; basePodium.receiveShadow = true; standGroup.add(basePodium);
+        podiumBottom.position.y = 0.175;
+        podiumBottom.receiveShadow = true;
+        standGroup.add(podiumBottom);
 
-        const topPodium = new THREE.Mesh(
-            new THREE.CylinderGeometry(5.2, 5.6, 0.4, 36),
-            new THREE.MeshStandardMaterial({ color: 0x484e57, roughness: 0.7 })
+        const podiumTop = new THREE.Mesh(
+            new THREE.CylinderGeometry(4.8, 5.2, 0.5, 40),
+            new THREE.MeshStandardMaterial({ color: 0x6e7480, roughness: 0.65 })
         );
-        topPodium.position.y = 0.65; topPodium.receiveShadow = true; standGroup.add(topPodium);
+        podiumTop.position.y = 0.6;
+        podiumTop.receiveShadow = true;
+        standGroup.add(podiumTop);
 
-        const brassRim = new THREE.Mesh(
-            new THREE.TorusGeometry(5.2, 0.08, 12, 48),
-            new THREE.MeshStandardMaterial({ color: 0xcca038, metalness: 0.85, roughness: 0.25 })
+        const goldRing = new THREE.Mesh(
+            new THREE.TorusGeometry(4.8, 0.1, 14, 48).rotateX(Math.PI / 2),
+            new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.85, roughness: 0.25 })
         );
-        brassRim.rotation.x = Math.PI / 2; brassRim.position.y = 0.85; standGroup.add(brassRim);
+        goldRing.position.y = 0.85;
+        standGroup.add(goldRing);
 
-        const standSpotlight = new THREE.PointLight(0xffe6a8, 0, 24);
-        standSpotlight.position.set(0, 4.0, 0); 
-        standSpotlight.castShadow = false; 
-        standGroup.add(standSpotlight); 
-        cityLights.push(standSpotlight);
+        // 4 прожектори знизу вгору на статую
+        [[-3.2, -3.2], [3.2, -3.2], [-3.2, 3.2], [3.2, 3.2]].forEach(([sx, sz]) => {
+            const spotLight = new THREE.SpotLight(0xffeaad, 2.8, 18, Math.PI / 4, 0.4);
+            spotLight.position.set(sx, 1.2, sz);
+            spotLight.target.position.set(0, 3.0, 0);
+            standGroup.add(spotLight);
+            standGroup.add(spotLight.target);
+            cityLights.push(spotLight);
+        });
 
-        loader.load('polar_bear_ornament/scene.gltf', (gltf) => {
-            try {
-                const m = gltf.scene;
-                m.updateMatrixWorld(true);
-                const box = new THREE.Box3().setFromObject(m);
-                const scale = 2.1 / (box.getSize(new THREE.Vector3()).y || 1);
-                m.scale.setScalar(scale);
-                m.position.set(-2.2, 0.85 - box.min.y * scale, 0.4);
-                m.rotation.y = 0.4;
-                standGroup.add(m);
-            } catch(e) {}
-        }, undefined, () => {});
-
+        // Завантаження 3 ведмедів
         loader.load('low_poly_bear_3d_model_free/scene.gltf', (gltf) => {
             try {
-                const m = gltf.scene;
-                m.updateMatrixWorld(true);
-                const box = new THREE.Box3().setFromObject(m);
-                const scale = 2.3 / (box.getSize(new THREE.Vector3()).y || 1);
-                m.scale.setScalar(scale);
-                m.position.set(2.2, 0.85 - box.min.y * scale, 0.4);
-                m.rotation.y = -0.5;
-                standGroup.add(m);
-            } catch(e) {}
-        }, undefined, () => {});
+                const baseModel = gltf.scene;
+                baseModel.updateMatrixWorld(true);
+                const box = new THREE.Box3().setFromObject(baseModel);
+                const h = box.getSize(new THREE.Vector3()).y || 1;
 
-        loader.load('deer/scene.gltf', (gltf) => {
-            try {
-                const m = gltf.scene;
-                m.updateMatrixWorld(true);
-                const box = new THREE.Box3().setFromObject(m);
-                const scale = 2.0 / (box.getSize(new THREE.Vector3()).y || 1);
-                m.scale.setScalar(scale);
-                m.position.set(0.0, 0.85 - box.min.y * scale, -2.0);
-                standGroup.add(m);
-            } catch(e) {}
-        }, undefined, () => {});
+                const bigBear = baseModel.clone(true);
+                const scBig = 2.4 / h;
+                bigBear.scale.setScalar(scBig);
+                bigBear.position.set(0.0, 0.85 - box.min.y * scBig, -0.6);
+                standGroup.add(bigBear);
 
-        loader.load('rabbit/scene.gltf', (gltf) => {
-            try {
-                const m = gltf.scene;
-                m.updateMatrixWorld(true);
-                const box = new THREE.Box3().setFromObject(m);
-                const scale = 0.75 / (box.getSize(new THREE.Vector3()).y || 1);
-                m.scale.setScalar(scale);
-                m.position.set(0.0, 0.85 - box.min.y * scale, 2.6);
-                m.rotation.y = Math.PI;
-                standGroup.add(m);
-            } catch(e) {}
-        }, undefined, () => {});
+                const cub1 = baseModel.clone(true);
+                const scCub1 = 1.35 / h;
+                cub1.scale.setScalar(scCub1);
+                cub1.position.set(-1.8, 0.85 - box.min.y * scCub1, 1.0);
+                cub1.rotation.y = 0.5;
+                standGroup.add(cub1);
 
+                const cub2 = baseModel.clone(true);
+                const scCub2 = 1.05 / h;
+                cub2.scale.setScalar(scCub2);
+                cub2.position.set(1.7, 0.85 - box.min.y * scCub2, 0.9);
+                cub2.rotation.y = -0.5;
+                standGroup.add(cub2);
+            } catch(e) {}
+        });
+
+        // 6. УВІМКНЕННЯ МІСТА
         function enableCity() {
             if (isCityActive) return;
             isCityActive = true;
             cityDistrictGroup.visible = true;
             cityLights.forEach(light => {
-                light.intensity = (light === standSpotlight) ? 2.8 : 1.8;
+                if (light.isSpotLight) light.intensity = 2.8;
+                else light.intensity = 1.8;
             });
         }
 
+
+        // ==============================================================
+        // 7. ВОЛЬЄР 20х20 МЕТРІВ ЗА МІСТОМ (4 КАМ'ЯНІ СТІНИ, ОЗЕРО, 1 ДЕРЕВО, М'ЯСО)
+        // ==============================================================
+       const enclosureGroup = new THREE.Group();
+        enclosureGroup.position.copy(ENCLOSURE_POS);
+        enclosureGroup.visible = false;
+        scene.add(enclosureGroup);
+
+        function buildEnclosure() {
+            // Підлога вольєра 20х20 м
+            const floorGeo = new THREE.PlaneGeometry(20.0, 20.0);
+            floorGeo.rotateX(-Math.PI / 2);
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0x2e4a23,
+                roughness: 0.92,
+                metalness: 0.02
+            });
+            const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+            floorMesh.position.y = 0.02;
+            floorMesh.receiveShadow = true;
+            enclosureGroup.add(floorMesh);
+
+            // 1. ЧОТИРИ КАМ'ЯНІ СТІНИ З КУТОВИМИ КОЛОНАМИ
+            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x5a554c, roughness: 0.95 });
+            const stoneCapMat = new THREE.MeshStandardMaterial({ color: 0x3d3831, roughness: 0.88 });
+
+            function createWall(length, isRotated = false) {
+                const wallGrp = new THREE.Group();
+                const wallBody = new THREE.Mesh(new THREE.BoxGeometry(length, 3.4, 0.6), stoneMat);
+                wallBody.position.y = 1.7;
+                wallBody.castShadow = true;
+                wallBody.receiveShadow = true;
+                wallGrp.add(wallBody);
+
+                const wallCap = new THREE.Mesh(new THREE.BoxGeometry(length + 0.1, 0.25, 0.76), stoneCapMat);
+                wallCap.position.y = 3.4 + 0.125;
+                wallGrp.add(wallCap);
+
+                if (isRotated) wallGrp.rotation.y = Math.PI / 2;
+                return wallGrp;
+            }
+
+            // 4 стіни
+            const northWall = createWall(20.0); northWall.position.set(0, 0, -10.0); enclosureGroup.add(northWall);
+            const southWall = createWall(20.0); southWall.position.set(0, 0, 10.0);  enclosureGroup.add(southWall);
+            const westWall  = createWall(20.0, true); westWall.position.set(-10.0, 0, 0); enclosureGroup.add(westWall);
+            const eastWall  = createWall(20.0, true); eastWall.position.set(10.0, 0, 0);  enclosureGroup.add(eastWall);
+
+            // 4 кутові колони для міцного архітектурного вигляду
+            const pillarGeo = new THREE.BoxGeometry(0.9, 3.8, 0.9);
+            [[-10, -10], [10, -10], [-10, 10], [10, 10]].forEach(([px, pz]) => {
+                const pillar = new THREE.Mesh(pillarGeo, stoneCapMat);
+                pillar.position.set(px, 1.9, pz);
+                pillar.castShadow = true;
+                enclosureGroup.add(pillar);
+            });
+
+            // 2. ОДНЕ КРАСИВЕ ДЕРЕВО (в північно-західному кутку)
+            const treeHolder = new THREE.Group();
+            treeHolder.position.set(-5.8, 0, -5.8);
+
+            // Стовбур
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2514, roughness: 0.9 });
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.52, 5.0, 10), trunkMat);
+            trunk.position.y = 2.5;
+            trunk.castShadow = true;
+            treeHolder.add(trunk);
+
+            // Пишна крона з кількох сфер
+            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x27521e, roughness: 0.85, flatShading: true });
+            const canopyClusters = [
+                { x: 0, y: 5.4, z: 0, r: 2.1 },
+                { x: 0.9, y: 4.8, z: 0.6, r: 1.6 },
+                { x: -0.8, y: 4.9, z: -0.5, r: 1.5 },
+                { x: 0.2, y: 6.2, z: -0.4, r: 1.4 }
+            ];
+            canopyClusters.forEach(c => {
+                const foliage = new THREE.Mesh(new THREE.DodecahedronGeometry(c.r, 1), leavesMat);
+                foliage.position.set(c.x, c.y, c.z);
+                foliage.castShadow = true;
+                treeHolder.add(foliage);
+            });
+            enclosureGroup.add(treeHolder);
+
+            // 3. МІНІ-СТАВОК З ВОДОЮ ТА КАМІННЯМ (у південно-східному кутку)
+            const pondGrp = new THREE.Group();
+            pondGrp.position.set(5.2, 0, 5.2);
+
+            // Дно і вода ставка
+            const pondBasin = new THREE.Mesh(
+                new THREE.CircleGeometry(2.4, 28).rotateX(-Math.PI / 2),
+                new THREE.MeshStandardMaterial({ color: 0x142b26, roughness: 0.9 })
+            );
+            pondBasin.position.y = 0.04;
+            pondGrp.add(pondBasin);
+
+            const pondWater = new THREE.Mesh(
+                new THREE.CircleGeometry(2.35, 28).rotateX(-Math.PI / 2),
+                waterMat
+            );
+            pondWater.position.y = 0.12;
+            pondGrp.add(pondWater);
+
+            // Природні камінці по колу ставка
+            const rockMat = new THREE.MeshStandardMaterial({ color: 0x5a5852, roughness: 0.9 });
+            const rockCount = 14;
+            for (let i = 0; i < rockCount; i++) {
+                const angle = (i / rockCount) * Math.PI * 2;
+                const dist = 2.3 + (Math.sin(i * 3) * 0.15);
+                const rx = Math.cos(angle) * dist;
+                const rz = Math.sin(angle) * dist;
+                const rockScale = 0.25 + (Math.sin(i * 5) + 1) * 0.12;
+                const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rockScale, 0), rockMat);
+                rock.position.set(rx, 0.12, rz);
+                rock.scale.set(1.2, 0.7, 1.0);
+                rock.castShadow = true;
+                pondGrp.add(rock);
+            }
+
+            // Маленьке зелене латаття у ставку
+            const lilyMat = new THREE.MeshStandardMaterial({ color: 0x2d6b38, roughness: 0.6 });
+            const lily = new THREE.Mesh(new THREE.CircleGeometry(0.35, 8).rotateX(-Math.PI / 2), lilyMat);
+            lily.position.set(0.6, 0.13, 0.4);
+            pondGrp.add(lily);
+            enclosureGroup.add(pondGrp);
+
+            // 4. РЕАЛІСТИЧНИЙ ШМАТОК М'ЯСА НА ДЕРЕВ'ЯНОМУ ПЕНЬКУ
+            const meatSpot = new THREE.Group();
+            meatSpot.position.set(-3.5, 0, 3.5);
+
+            // Пеньок-підставка
+            const stumpMat = new THREE.MeshStandardMaterial({ color: 0x48301c, roughness: 0.9 });
+            const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 0.35, 14), stumpMat);
+            stump.position.y = 0.175;
+            stump.receiveShadow = true;
+            meatSpot.add(stump);
+
+            // Пробуємо завантажити day11_meat, але обов'язково нормуємо до РЕАЛЬНОГО розміру (0.32 м)
+            loader.load('day11_meat/scene.gltf', (gltf) => {
+                const meatModel = gltf.scene;
+                meatModel.updateMatrixWorld(true);
+                const b = new THREE.Box3().setFromObject(meatModel);
+                const maxDim = Math.max(
+                    b.max.x - b.min.x,
+                    b.max.y - b.min.y,
+                    b.max.z - b.min.z
+                ) || 1.0;
+                // Нормальний компактний розмір порції
+                const sc = 0.32 / maxDim;
+                meatModel.scale.setScalar(sc);
+                meatModel.position.set(0, 0.35 - b.min.y * sc, 0);
+                meatModel.traverse(c => { if (c.isMesh) { c.castShadow = true; } });
+                meatSpot.add(meatModel);
+            }, undefined, () => {
+                // Акуратний шматок м'яса на кістці (Steak/Rib)
+                const steakGroup = new THREE.Group();
+                steakGroup.position.y = 0.35;
+
+                // Червоне соковите м'ясо (32х12х22 см)
+                const meatMesh = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.32, 0.12, 0.22),
+                    new THREE.MeshStandardMaterial({ color: 0x991818, roughness: 0.45, metalness: 0.05 })
+                );
+                meatMesh.position.y = 0.06;
+                meatMesh.castShadow = true;
+                steakGroup.add(meatMesh);
+
+                // Біла кісточка, що стирчить
+                const boneMat = new THREE.MeshStandardMaterial({ color: 0xeee7d5, roughness: 0.6 });
+                const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.44, 8), boneMat);
+                bone.rotation.z = Math.PI / 2.3;
+                bone.position.set(0.04, 0.07, 0);
+                bone.castShadow = true;
+                steakGroup.add(bone);
+
+                meatSpot.add(steakGroup);
+            });
+
+            enclosureGroup.add(meatSpot);
+        }
+        buildEnclosure();
+
+        // 8. ПЕРЕХІД ДО ВОЛЬЄРА (1 ХВИЛИНА СНУ -> ВОЛЬЄР)
+        let isTransitioning = false;
+       function transitionToEnclosure() {
+            if (isTransitioning) return;
+            isTransitioning = true;
+            isDay10CityWandering = false;
+            isSleeping = true;
+
+            for (let k in keys) keys[k] = false;
+            if (actions.sleep) switchAnimation('sleep');
+
+            // Напис під картинкою при переході у вольєр
+            if (sleepCaptionEl) {
+                sleepCaptionEl.innerText = "1 хвилина минула. Знесилений ведмідь падає і засинає...";
+            }
+            if (sleepOverlayEl) sleepOverlayEl.classList.add('active');
+
+            // 4 секунди показу картинки перед появою у вольєрі
+            setTimeout(() => {
+                isInEnclosure = true;
+                enclosureGroup.visible = true;
+
+                bearContainer.position.set(ENCLOSURE_POS.x, 0.08, ENCLOSURE_POS.z);
+                bearContainer.rotation.y = 0;
+                targetHour = 12.0;
+                currentHour = 12.0;
+                isSleeping = false;
+                isTransitioning = false;
+
+                if (actions.idle) switchAnimation('idle');
+
+                controls.target.set(ENCLOSURE_POS.x, 1.2, ENCLOSURE_POS.z);
+                camera.position.set(ENCLOSURE_POS.x, 5.5, ENCLOSURE_POS.z + 8.5);
+                targetDistance = 7.5;
+
+                if (huntSubtitleEl) {
+                    huntSubtitleEl.innerText = "День 11";
+                }
+
+                setTimeout(() => {
+                    if (sleepOverlayEl) sleepOverlayEl.classList.remove('active');
+                }, 1200);
+            }, 4000);
+        }
         // 8.4 ЗВУКИ
         let audioCtx = null;
         let riverNoiseGain = null;
 
         function initAudio() {
-            if (audioCtx) return;
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const bufferSize = audioCtx.sampleRate * 2;
-                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const output = noiseBuffer.getChannelData(0);
-                let b0 = 0, b1 = 0, b2 = 0;
-                for (let i = 0; i < bufferSize; i++) {
-                    const white = Math.random() * 2 - 1;
-                    b0 = 0.99886 * b0 + white * 0.0555179;
-                    b1 = 0.99332 * b1 + white * 0.0750759;
-                    b2 = 0.96900 * b2 + white * 0.1538520;
-                    output[i] = (b0 + b1 + b2) * 0.12;
-                }
+           
 
-                const whiteNoise = audioCtx.createBufferSource();
-                whiteNoise.buffer = noiseBuffer;
-                whiteNoise.loop = true;
-
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.value = 650;
-
-                riverNoiseGain = audioCtx.createGain();
-                riverNoiseGain.gain.value = 0.0;
-
-                whiteNoise.connect(filter);
-                filter.connect(riverNoiseGain);
-                riverNoiseGain.connect(audioCtx.destination);
-                whiteNoise.start();
-            } catch (e) {}
         }
 
         function playWaterSplashSound() {
-            if (!audioCtx) return;
-            try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(320, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(70, audioCtx.currentTime + 0.35);
-                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.38);
-            } catch (e) {}
+         
         }
 
         window.addEventListener('keydown', initAudio, { once: true });
@@ -1266,7 +1695,7 @@
                     if (huntSubtitleEl) huntSubtitleEl.innerText = "Невдача, пора спати... [Натисніть T]";
                 }
             } else if (gameStage === 2) {
-                playWaterSplashSound();
+               
                 activeWaypointIndex++;
                 if (activeWaypointIndex < currentWps.length) {
                     if (activeWaypointIndex === 1) targetHour = 15.0;
@@ -1298,7 +1727,6 @@
                     rotateCameraToTarget(nextWp.x, nextWp.z);
                     if (huntSubtitleEl) huntSubtitleEl.innerText = "Заєць утік! Слід оленя веде до річки... (Слід 2 з 6)";
                 } else if (activeWaypointIndex >= 2 && activeWaypointIndex < 6) {
-                    playWaterSplashSound();
                     if (activeWaypointIndex === 2) targetHour = 17.9;
                     if (activeWaypointIndex === 3) targetHour = 20.0;
                     if (activeWaypointIndex === 4) targetHour = 22.0;
@@ -1326,6 +1754,7 @@
                 if (huntSubtitleEl) {
                     huntSubtitleEl.innerText = "Стомлений і знесилений ведмідь дійшов до стенду з тваринами у темряві ночі... Лягти спати [Натисніть T]";
                 }
+                
             }
         }
 
@@ -1374,81 +1803,117 @@
                 }
             });
 
-            if (riverNoiseGain && audioCtx) {
-                const distToRiver = Math.abs(bz - RIVER_Z);
-                const volume = THREE.MathUtils.clamp(1.0 - distToRiver / 65.0, 0.0, 0.35);
-                riverNoiseGain.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.15);
-            }
+           
         }
 
         // 8.6 СОН І ПЕРЕХОДИ
+          // 8.6 ПЛАВНИЙ СОН ТА ПЕРЕХІД НА НАСТУПНИЙ ДЕНЬ
+        const sleepOverlayEl = document.getElementById('sleep-image-overlay');
+        const sleepCaptionEl = document.getElementById('sleep-caption');
+
         function sleepAndAdvanceDay() {
-            if (!screenFadeEl) return;
-            screenFadeEl.classList.add('sleep-black');
+            // 1. Анімація ведмедя: лягає спати
+            isSleeping = true;
+            if (actions.sleep) switchAnimation('sleep');
 
-            if (huntSubtitleEl) huntSubtitleEl.innerText = "Ведмідь засинає під зорями...";
+            // 2. Встановлюємо напис, який саме день щойно завершився
+            if (sleepCaptionEl) {
+                if (gameStage === 1) {
+                    sleepCaptionEl.innerText = "День 1 добіг кінця. Знесилений ведмідь засинає...";
+                } else if (gameStage === 2) {
+                    sleepCaptionEl.innerText = "День 2 добіг кінця. Ведмідь засинає під шум води...";
+                } else if (gameStage === 3) {
+                    sleepCaptionEl.innerText = "Дні пошуків минають... Ведмідь засинає під зорями...";
+                } else if (gameStage === 4) {
+                    sleepCaptionEl.innerText = "Ніч у місті. Ведмідь засинає біля стенду...";
+                }
+            }
 
+            // 3. Плавно показуємо малюнок на пів екрану
+            if (sleepOverlayEl) sleepOverlayEl.classList.add('active');
+
+            // 4. Через 2 секунди (коли екран уже повністю закритий картинкою) перемикаємо світ
             setTimeout(() => {
                 gameStage++;
                 activeWaypointIndex = 0;
                 isNightSleepingStage = false;
                 isCitySleepStage = false;
 
+                // Ховаємо попередніх тварин
                 animalsList.forEach((a) => {
-                    a.fleeing = false;
-                    a.fled = false;
-                    a.group.visible = false;
+                    a.fleeing = false; a.fled = false; a.group.visible = false;
                 });
                 fishList.forEach(f => { f.mesh.visible = false; });
 
+                // НАСТУПНИЙ ДЕНЬ:
                 if (gameStage === 2) {
+                    // НАСТАВ ДЕНЬ 2: Ранок на річці, риболовля
                     currentDayDisplay = "День 2 / 10";
-                    targetHour = 9.5;
-                    currentHour = 9.5;
+                    targetHour = 9.0;
+                    currentHour = 9.0;
+
                     const firstFishWp = day2RiverWaypoints[0];
                     setWaypointVisualPos(firstFishWp.x, firstFishWp.z, true);
                     if (fishList[0]) fishList[0].mesh.visible = true;
-                    if (huntSubtitleEl) huntSubtitleEl.innerText = "День 2. Чутно шум води... Треба дійти до річки та вполювати рибу.";
+
+                    if (huntSubtitleEl) {
+                        huntSubtitleEl.innerText = "День 2";
+                    }
                     rotateCameraToTarget(firstFishWp.x, firstFishWp.z);
+
                 } else if (gameStage === 3) {
+                    // НАСТАВ ДЕНЬ 3-6: Полювання в лісі та річці
                     currentDayDisplay = "День 3-6 / 10";
                     targetHour = 9.5;
                     currentHour = 9.5;
+
                     const firstWp = combinedWaypoints[0];
                     setWaypointVisualPos(firstWp.x, firstWp.z, false);
                     if (animalsList[0]) {
                         animalsList[0].group.position.set(firstWp.x, getTerrainHeight(firstWp.x, firstWp.z), firstWp.z);
                         animalsList[0].group.visible = true;
-                        animalsList[0].fleeing = false;
-                        animalsList[0].fled = false;
                     }
-                    if (huntSubtitleEl) huntSubtitleEl.innerText = "День 3-6. Минають дні пошуків... Знову вистежуємо здобич та рибу.";
+                    if (huntSubtitleEl) {
+                        huntSubtitleEl.innerText = "День 3-6";
+                    }
                     rotateCameraToTarget(firstWp.x, firstWp.z);
+
                 } else if (gameStage === 4) {
+                    // НАСТАВ ДЕНЬ 7: Дорога до міста
                     currentDayDisplay = "День 7 / 10";
-                    targetHour = 12.0;
-                    currentHour = 12.0;
+                    targetHour = 11.5;
+                    currentHour = 11.5;
                     setWaypointVisualPos(CITY_X, CITY_Z, false);
                     if (huntSubtitleEl) {
-                        huntSubtitleEl.innerText = "День 7. Знесилений ведмідь вирушає в далеку дорогу до міста...";
+                        huntSubtitleEl.innerText = "День 7";
                     }
                     rotateCameraToTarget(CITY_X, CITY_Z);
+
                 } else if (gameStage >= 5) {
+                    // НАСТАВ ДЕНЬ 10: Прокинувся в місті (1 хвилина)
                     currentDayDisplay = "День 10 / 10";
-                    targetHour = 9.0;
-                    currentHour = 9.0;
+                    targetHour = 12.0;
+                    currentHour = 12.0;
                     wpVisualGroup.visible = false;
+                    isDay10CityWandering = true;
+                    day10Timer = 30.0;
                     if (huntSubtitleEl) {
-                        huntSubtitleEl.innerText = "День 10. Фінал. Знесилений ведмідь нарешті знайшов спокій і прихисток біля нових друзів.";
+                        huntSubtitleEl.innerText = "День 10";
                     }
                 }
 
+                // 5. Даємо гравцеві ще 1.5 секунди подивитися на картинку сну
                 setTimeout(() => {
-                    screenFadeEl.classList.remove('sleep-black');
-                }, 800);
+                    // Плавно розчиняємо картинку у новий ранок
+                    if (sleepOverlayEl) sleepOverlayEl.classList.remove('active');
+                    
+                    // Ведмідь прокидається і встає
+                    isSleeping = false;
+                    if (actions.idle) switchAnimation('idle');
+                }, 1600);
+
             }, 1800);
         }
-
         // 9. ХУТРО ТА ШЕЙДЕРИ СНУ
         const bearShaderUniforms = {
             uNoseTip: { value: new THREE.Vector3(0, 0, 0) },
@@ -1567,7 +2032,7 @@
 
                 if (blackMask > 0.0) {
                     vec3 blackFur = vec3(0.028, 0.025, 0.023);
-                    gl_FragColor.rgb = mix(gl_FragColor.rgb, blackFur, blackMask * 0.98);
+                    gl_FragColor.rgb = mix(gl_FragColor.rgb, blackFur, blackMask * 0.45);
                 }
                 `
             );
@@ -2147,16 +2612,13 @@
         }
 
         // 12. ВІДОБРАЖЕННЯ МАРКЕРА
-        const tempVec = new THREE.Vector3();
-        const camDir = new THREE.Vector3();
+         const tempVec = new THREE.Vector3();
 
         function updateWaypointsOnScreen(elapsedTime) {
             if (isNightSleepingStage || isCitySleepStage || !wpVisualGroup.visible) {
                 if (activeWpMarkerEl) activeWpMarkerEl.style.display = 'none';
                 return;
             }
-
-            camera.getWorldDirection(camDir);
 
             if (ringMesh) {
                 const pulse = 1.0 + Math.sin(elapsedTime * 3.5) * 0.08;
@@ -2171,44 +2633,55 @@
                 return;
             }
 
+            // 1. Рахуємо точну 3D або 2D дистанцію до центру точки
             const dist = Math.hypot(bearContainer.position.x - currentWp.x, bearContainer.position.z - currentWp.z);
-            const threshold = (gameStage === 4) ? 4.8 : 3.2;
+            
+            // Поріг підходу (радіус зони спрацьовування)
+            // Зробимо його комфортним для підходу ведмедя:
+            const triggerRadius = (gameStage === 4) ? 2.2 : 1.4;
 
-            if (dist < threshold) {
+            // 2. Якщо ведмідь зайшов у зону точки — зараховуємо її
+            if (dist <= triggerRadius) {
                 collectActiveWaypoint();
                 return;
             }
 
+            // 3. Дистанція, яка виводиться гравцю:
+            // Рахуємо дистанцію ДО ЗОНИ взяття (щоб коли підійшов, було чесних 0-1 м, а не залишок 3 м)
+            const displayDist = Math.max(0, Math.round(dist - triggerRadius));
+
             const wpY = (currentWp.type === 'fish') ? WATER_Y : getSurfaceHeight(currentWp.x, currentWp.z);
             tempVec.set(currentWp.x, wpY + 1.2, currentWp.z);
 
-            const toPoint = tempVec.clone().sub(camera.position);
-            const isForward = toPoint.dot(camDir) > 0.1;
+            tempVec.project(camera);
 
-            if (!isForward) {
+            // Якщо точка позаду площини огляду камери
+            if (tempVec.z > 1.0) {
                 if (activeWpMarkerEl) activeWpMarkerEl.style.display = 'none';
                 return;
             }
 
-            tempVec.project(camera);
-
             const x = (tempVec.x * 0.5 + 0.5) * window.innerWidth;
             const y = (-(tempVec.y * 0.5) + 0.5) * window.innerHeight;
 
-            if (x < 15 || x > window.innerWidth - 15 || y < 15 || y > window.innerHeight - 15) {
+            const pad = 25;
+            if (x < pad || x > window.innerWidth - pad || y < pad || y > window.innerHeight - pad) {
                 if (activeWpMarkerEl) activeWpMarkerEl.style.display = 'none';
                 return;
             }
 
             if (activeWpMarkerEl) {
                 activeWpMarkerEl.style.display = 'flex';
-                activeWpMarkerEl.style.left = `${x}px`;
-                activeWpMarkerEl.style.top = `${y}px`;
+                activeWpMarkerEl.style.left = `${Math.round(x)}px`;
+                activeWpMarkerEl.style.top = `${Math.round(y)}px`;
+
                 const labelEl = activeWpMarkerEl.querySelector('.waypoint-label');
-                labelEl.innerText = `${Math.round(dist)} м`;
+                if (labelEl) {
+                    // Показує "0 м" або реальні метри до цілі без штучного завищення
+                    labelEl.innerText = `${displayDist} м`;
+                }
             }
         }
-
         // 13. КЕРУВАННЯ
         const keys = {};
         let isSleeping = false;
@@ -2216,6 +2689,22 @@
         let isFastForward = false;
 
         window.addEventListener('keydown', (e) => {
+             if (e.code === 'Space') {
+                if (introStep === 1) {
+                    introStep = 2;
+                    if (introImgEl) introImgEl.src = '2.jpg';
+                    if (introCaptionEl) introCaptionEl.innerText = "Вибух. Ударна хвиля пронеслася лісом, а вогонь охопив дерева.  тварини втекли, інші не змогли врятуватися. Ведмідь отримав тяжкі травми, втратив зір і нюх, але вижив.Прокинувшись, він побачив навколо знайомий зелений ліс, яким пам’ятав його раніше. Та насправді від нього залишилися лише попіл, обгорілі дерева та руїни. Ведмідь більше не міг побачити справжній світ...";
+                    return;
+                } else if (introStep === 2) {
+                    introStep = 3; // Старт гри
+                    if (introOverlayEl) {
+                        introOverlayEl.style.opacity = '0';
+                        setTimeout(() => introOverlayEl.style.display = 'none', 800);
+                    }
+                    return;
+                }
+            }
+            if (introStep < 3) return;
             keys[e.code] = true;
             if (e.code === 'KeyT') {
                 if (isCitySleepStage && gameStage === 4) {
@@ -2328,9 +2817,16 @@
 
                     resolveDynamicCollisions(targetPos);
 
-                    const maxGroundRadius = 720.0;
-                    bearContainer.position.x = THREE.MathUtils.clamp(targetPos.x, -maxGroundRadius, maxGroundRadius);
-                    bearContainer.position.z = THREE.MathUtils.clamp(targetPos.z, -maxGroundRadius, maxGroundRadius);
+                    // Межі пересування: у вольєрі 5х5 м ведмідь не може вийти за стіни
+                   if (isInEnclosure) {
+                        const halfW = 9.2; // 20x20 метрів
+                        bearContainer.position.x = THREE.MathUtils.clamp(targetPos.x, ENCLOSURE_POS.x - halfW, ENCLOSURE_POS.x + halfW);
+                        bearContainer.position.z = THREE.MathUtils.clamp(targetPos.z, ENCLOSURE_POS.z - halfW, ENCLOSURE_POS.z + halfW);
+                    } else {
+                        const maxGroundRadius = 720.0;
+                        bearContainer.position.x = THREE.MathUtils.clamp(targetPos.x, -maxGroundRadius, maxGroundRadius);
+                        bearContainer.position.z = THREE.MathUtils.clamp(targetPos.z, -maxGroundRadius, maxGroundRadius);
+                    }
 
                     if (isSprint && actions.run) {
                         switchAnimation('run');
@@ -2347,7 +2843,7 @@
                 switchAnimation('idle');
             }
 
-            const surfaceY = getSurfaceHeight(bearContainer.position.x, bearContainer.position.z);
+            const surfaceY = isInEnclosure ? 0.06 : getSurfaceHeight(bearContainer.position.x, bearContainer.position.z);
             const currentGroundY = Math.max(surfaceY, WATER_Y - 0.75);
             bearContainer.position.y = THREE.MathUtils.lerp(bearContainer.position.y, currentGroundY, 12.0 * delta);
 
@@ -2376,16 +2872,49 @@
 
                 if (!isCitySleepStage) {
                     if (currentDayIndex === 0) {
-                        huntSubtitleEl.innerText = "День 7. Ведмідь вирушив у довгу дорогу до далекого міста...";
+                        huntSubtitleEl.innerText = "День 7";
                     } else if (currentDayIndex === 1) {
-                        huntSubtitleEl.innerText = "День 8. Друга доба в дорозі... Сонце сходить і знову згасає, сили тануть.";
+                        huntSubtitleEl.innerText = "День 8";
                     } else {
                         if (distToCity > 50.0) {
-                            huntSubtitleEl.innerText = "День 9. Настає вечір... Попереду вже сяють теплі вікна та ліхтарі міста.";
+                            huntSubtitleEl.innerText = "День 9";
                         } else {
-                            huntSubtitleEl.innerText = "Ніч огорнула місто. Знесилений ведмідь дістався стенду з друзями...";
+                            huntSubtitleEl.innerText = "Ніч огорнула місто...";
                         }
                     }
+                }
+            }
+
+            // ДЕНЬ 10: АВТОМАТИЧНИЙ ТАЙМЕР 30 секунд В МІСТІ (ПРАВИЛЬНЕ МІСЦЕ)
+            if (isDay10CityWandering) {
+                day10Timer -= delta;
+                const totalSec = Math.max(0, Math.ceil(day10Timer));
+                const mins = Math.floor(totalSec / 60);
+                const secs = totalSec % 60;
+                const secFormatted = secs < 10 ? '0' + secs : secs;
+
+                if (huntSubtitleEl) {
+                    huntSubtitleEl.innerText = `День 10 ${mins}:${secFormatted}`;
+                }
+
+                if (day10Timer <= 0) {
+                    transitionToEnclosure();
+                }
+            }
+
+            // ТАЙМЕР 10 СЕКУНД У ВОЛЬЄРІ -> ФІНАЛ (має бути окремо!)
+            if (isInEnclosure && !isFinalTriggered) {
+                enclosureStayTimer -= delta;
+                if (enclosureStayTimer <= 0) {
+                    isFinalTriggered = true;
+                    for (let k in keys) keys[k] = false;
+                    if (actions.idle) switchAnimation('idle');
+
+                    if (finalOverlayEl) {
+                        finalOverlayEl.style.opacity = '1';
+                        finalOverlayEl.style.pointerEvents = 'auto';
+                    }
+                    if (huntSubtitleEl) huntSubtitleEl.style.display = 'none';
                 }
             }
 
@@ -2395,9 +2924,9 @@
 
                 if (distToWaterEdge < 15.0) {
                     const rem = Math.ceil(15.0 - distToWaterEdge);
-                    huntSubtitleEl.innerText = `Знову невдача! Відійдіть від води на сушу (ще ${rem} м), щоб заснути.`;
+                    huntSubtitleEl.innerText = `невдача! Відійдіть від води на сушу (ще ${rem} м), щоб заснути.`;
                 } else {
-                    huntSubtitleEl.innerText = "Ви на безпечній суші. Знову невдача, пора спати... [Натисніть T]";
+                    huntSubtitleEl.innerText = "Ви на безпечній суші. Пора спати... [Натисніть T]";
                 }
             }
 
@@ -2418,6 +2947,11 @@
 
             const offsetDiff = controls.target.clone().sub(prevTarget);
             camera.position.add(offsetDiff);
+
+            // У вольєрі камера тримається ближче, щоб не вилітати за ґрати
+             if (isInEnclosure) {
+                targetDistance = THREE.MathUtils.clamp(targetDistance, 2.5, 8.5);
+            }
 
             currentDistance = THREE.MathUtils.lerp(currentDistance, targetDistance, 0.07);
             const camDirection = camera.position.clone().sub(controls.target).normalize();
@@ -2446,7 +2980,6 @@
 
             composer.render();
         }
-
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();

@@ -1,0 +1,11 @@
+Model Information:
+* title:	Stone wall download
+* source:	https://sketchfab.com/3d-models/stone-wall-download-4cde3f5cda7043ab92052f9d5de980e0
+* author:	3dAssetsForGames (https://sketchfab.com/3dAssatsForGames)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Stone wall download" (https://sketchfab.com/3d-models/stone-wall-download-4cde3f5cda7043ab92052f9d5de980e0) by 3dAssetsForGames (https://sketchfab.com/3dAssatsForGames) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
